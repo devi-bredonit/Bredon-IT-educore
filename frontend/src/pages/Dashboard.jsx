@@ -28,17 +28,17 @@ const Dashboard = () => {
 
       <section className="grid grid-3" style={{ marginBottom: '2.5rem' }}>
         {stats.map((stat, idx) => (
-          <div key={idx} className="glass-card" style={{ padding: '2rem' }}>
+          <div key={idx} className="glass-card" style={{ padding: '2rem', borderTop: `4px solid ${stat.color}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{stat.label}</span>
-              <div style={{ padding: '0.75rem', borderRadius: '12px', background: `rgba(255,255,255,0.05)`, color: stat.color }}>
+              <div style={{ padding: '0.75rem', borderRadius: '12px', background: `${stat.color}15`, color: stat.color }}>
                 <stat.icon size={24} />
               </div>
             </div>
-            <h2 style={{ fontSize: '2rem', fontWeight: 700 }}>{stat.value}</h2>
-            <p style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.5rem', fontSize: '0.875rem', color: '#10b981' }}>
-              <span>+12.5%</span>
-              <TrendingUp size={14} />
+            <h2 style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text)' }}>{stat.value}</h2>
+            <p style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.5rem', fontSize: '0.875rem' }}>
+              <span style={{ color: '#10b981' }}>+12.5%</span>
+              <TrendingUp size={14} color="#10b981" />
               <span style={{ color: 'var(--text-muted)', marginLeft: '0.25rem' }}>from last month</span>
             </p>
           </div>
