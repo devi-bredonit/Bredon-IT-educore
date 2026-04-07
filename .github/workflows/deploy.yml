@@ -1,0 +1,48 @@
+name: Deploy Educore Backend
+
+on:
+  push:
+    branches: [main, liki_feature_branch]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Create .env from GitHub Secret
+        working-directory: ./backend
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
+
+      - name: Test database connection
+        working-directory: ./backend
+        run: |
+          python -c "
+          import os
+          from dotenv import load_dotenv
+          load_dotenv()
+          from sqlalchemy import create_engine, text
+          engine = create_engine(os.getenv('DATABASE_URL'))
+          with engine.connect() as conn:
+              result = conn.execute(text('SELECT 1'))
+              print('✅ Database connection successful!')
+          "
