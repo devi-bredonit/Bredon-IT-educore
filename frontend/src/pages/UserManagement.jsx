@@ -37,15 +37,15 @@ const UserManagement = () => {
                             width: '100%',
                             padding: '0.75rem 1rem 0.75rem 3rem',
                             borderRadius: '12px',
-                            background: 'rgba(255,255,255,0.05)',
+                            background: 'var(--surface)',
                             border: '1px solid var(--border)',
-                            color: 'white',
+                            color: 'var(--text)',
                             outline: 'none'
                         }}
                     />
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <select style={{ padding: '0.75rem 1rem', borderRadius: '12px', background: 'var(--surface)', border: '1px solid var(--border)', color: 'white' }}>
+                    <select style={{ padding: '0.75rem 1rem', borderRadius: '12px', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}>
                         <option>Role Filter</option>
                         <option>Super Admin</option>
                         <option>Corporate User</option>

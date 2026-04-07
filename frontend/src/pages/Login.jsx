@@ -24,7 +24,7 @@ const Login = ({ onLogin }) => {
       alignItems: 'center', 
       justifyContent: 'center', 
       height: '100vh', 
-      background: 'linear-gradient(to bottom right, #0f172a, #1e293b)'
+      background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)'
     }}>
       <div className="glass-card" style={{ width: '100%', maxWidth: '400px', padding: '3rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
@@ -46,9 +46,9 @@ const Login = ({ onLogin }) => {
                 width: '100%', 
                 padding: '0.875rem 1rem 0.875rem 3rem', 
                 borderRadius: '12px', 
-                background: 'rgba(255,255,255,0.05)', 
+                background: 'var(--surface)', 
                 border: '1px solid var(--border)',
-                color: 'white',
+                color: 'var(--text)',
                 outline: 'none'
               }}
             />
@@ -65,9 +65,9 @@ const Login = ({ onLogin }) => {
                 width: '100%', 
                 padding: '0.875rem 1rem 0.875rem 3rem', 
                 borderRadius: '12px', 
-                background: 'rgba(255,255,255,0.05)', 
+                background: 'var(--surface)', 
                 border: '1px solid var(--border)',
-                color: 'white',
+                color: 'var(--text)',
                 outline: 'none'
               }}
             />
