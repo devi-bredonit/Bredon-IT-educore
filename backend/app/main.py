@@ -3,6 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from app.api import routes_users, routes_schools, routes_students, routes_fees
+from app import models
+from app.database import engine
+
+# Create database tables
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="EduCore+ API")
 

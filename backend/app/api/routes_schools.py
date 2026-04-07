@@ -1,11 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app import models
 
 router = APIRouter(prefix="/schools", tags=["Schools"])
 
 class School(BaseModel):
-    id: int
+    id: Optional[int] = None
     name: str
     branch: Optional[str] = None
     code: str
@@ -21,21 +24,24 @@ class School(BaseModel):
     academic_year: str
     timezone: str
 
-# Mock database
-schools_db = []
+    class Config:
+        from_attributes = True
 
 @router.get("/", response_model=List[School])
-def get_schools():
-    return schools_db
+def get_schools(db: Session = Depends(get_db)):
+    return db.query(models.School).all()
 
 @router.post("/", response_model=School)
-def create_school(school: School):
-    schools_db.append(school)
-    return school
+def create_school(school: School, db: Session = Depends(get_db)):
+    db_school = models.School(**school.model_dump())
+    db.add(db_school)
+    db.commit()
+    db.refresh(db_school)
+    return db_school
 
 @router.get("/{school_id}", response_model=School)
-def get_school(school_id: int):
-    for school in schools_db:
-        if school.id == school_id:
-            return school
-    raise HTTPException(status_code=404, detail="School not found")
+def get_school(school_id: int, db: Session = Depends(get_db)):
+    db_school = db.query(models.School).filter(models.School.id == school_id).first()
+    if not db_school:
+        raise HTTPException(status_code=404, detail="School not found")
+    return db_school
