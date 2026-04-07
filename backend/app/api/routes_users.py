@@ -1,11 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app import models
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 class User(BaseModel):
-    id: int
+    id: Optional[int] = None
     school_id: Optional[int] = None
     username: str
     password: str
@@ -15,25 +18,31 @@ class User(BaseModel):
     email: str
     is_active: bool = True
 
-# Mock database
-users_db = [
-    User(id=1, username="admin", password="password", role="Super Admin", profile_name="Super Admin", phone="1234567890", email="superadmin@educore.com")
-]
+    class Config:
+        from_attributes = True
 
 @router.get("/", response_model=List[User])
-def get_users(school_id: Optional[int] = None):
+def get_users(school_id: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(models.User)
     if school_id:
-        return [u for u in users_db if u.school_id == school_id]
-    return users_db
+        query = query.filter(models.User.school_id == school_id)
+    return query.all()
 
 @router.post("/", response_model=User)
-def create_user(user: User):
-    users_db.append(user)
-    return user
+def create_user(user: User, db: Session = Depends(get_db)):
+    db_user = models.User(**user.model_dump())
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
 
 @router.post("/login")
-def login(credentials: dict):
-    for user in users_db:
-        if user.username == credentials["username"] and user.password == credentials["password"]:
-            return {"user": user, "token": "mockjwttoken"}
+def login(credentials: dict, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(
+        models.User.username == credentials["username"],
+        models.User.password == credentials["password"]
+    ).first()
+    
+    if user:
+        return {"user": user, "token": "mockjwttoken"}
     raise HTTPException(status_code=401, detail="Invalid username or password")
