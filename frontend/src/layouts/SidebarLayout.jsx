@@ -7,7 +7,8 @@ import {
   School, 
   UserCog, 
   LogOut,
-  ShieldCheck
+  ShieldCheck,
+  Settings
 } from 'lucide-react';
 
 const SidebarLayout = ({ user, onLogout }) => {
@@ -43,12 +44,10 @@ const SidebarLayout = ({ user, onLogout }) => {
       name: 'User Management', path: '/users', icon: UserCog, 
       perms: ['create_user', 'create_corporate'] 
     },
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['Super Admin', 'Corporate User', 'Administrator'] },
-    { name: 'Students', path: '/students', icon: Users, roles: ['Super Admin', 'Corporate User', 'Administrator'] },
-    { name: 'Fees & Payments', path: '/fees', icon: CreditCard, roles: ['Super Admin', 'Corporate User', 'Administrator'] },
-    { name: 'Schools', path: '/schools', icon: School, roles: ['Super Admin'] },
-    { name: 'User Management', path: '/users', icon: UserCog, roles: ['Super Admin'] },
-    { name: 'Fee Settings', path: '/fee-settings', icon: Settings, roles: ['Super Admin', 'Corporate User', 'Administrator'] },
+    { 
+      name: 'Fee Settings', path: '/fee-settings', icon: Settings, 
+      perms: ['always'] // Set to always or a specific perm if needed, using always to mimic roles: ['Super Admin', 'Corporate User', 'Administrator']
+    }
   ];
 
   const allowedNav = navItems.filter(item => {

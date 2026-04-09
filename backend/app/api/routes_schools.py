@@ -3,6 +3,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
+from app import models
 from app.models import School as SchoolModel
 
 router = APIRouter(prefix="/schools", tags=["Schools"])

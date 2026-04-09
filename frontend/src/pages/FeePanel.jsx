@@ -40,8 +40,28 @@ const FeePanel = () => {
     });
 
     const loggedInUser = JSON.parse(localStorage.getItem('user')) || {};
-    const schoolId = loggedInUser.school_id;
-    const currentSchool = loggedInUser.school_info || { name: 'EduCore School' };
+    const [schoolId, setSchoolId] = useState(loggedInUser.school_id || null);
+    const [currentSchool, setCurrentSchool] = useState(loggedInUser.school_info || { name: 'EduCore School' });
+
+    useEffect(() => {
+        const fetchInitial = async () => {
+            if (!schoolId) {
+                try {
+                    const resp = await fetch(`${API_BASE_URL}/schools/`);
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        if (data.length > 0) {
+                            setSchoolId(data[0].id);
+                            setCurrentSchool(data[0]);
+                        }
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        };
+        if (!schoolId) fetchInitial();
+    }, [schoolId]);
 
     useEffect(() => {
         if (schoolId) {
@@ -223,7 +243,7 @@ const FeePanel = () => {
             <header className="page-header">
                 <div className="title-group">
                     <h1>Fees &amp; Payments</h1>
-                    <p>Real-time fee collection management for {currentSchool.name}</p>
+                    <p>Real-time fee collection management for {currentSchool?.name}</p>
                 </div>
                 {!recordingMode && (
                     <div style={{ display: 'flex', gap: '1rem' }}>
@@ -329,14 +349,14 @@ const FeePanel = () => {
                                 </thead>
                                 <tbody>
                                     {students.filter(s => {
-                                        const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.admission_number.toLowerCase().includes(searchTerm.toLowerCase());
+                                        const matchesSearch = (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (s.admission_number || '').toLowerCase().includes(searchTerm.toLowerCase());
                                         const matchesStatus = filters.status === 'All' || s.payment_status === filters.status;
                                         return matchesSearch && matchesStatus;
                                     }).map(s => (
                                         <tr key={s.id}>
                                             <td>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800 }}>{s.name.charAt(0)}</div>
+                                                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800 }}>{(s.name || 'U').charAt(0)}</div>
                                                     <div>
                                                         <p style={{ fontWeight: 600 }}>{s.name}</p>
                                                         <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{s.admission_number} | {s.current_class}-{s.section}</p>
@@ -359,7 +379,7 @@ const FeePanel = () => {
                                                     )}
                                                 </div>
                                             </td>
-                                            <td style={{ fontWeight: 700 }}>₹{s.total.toLocaleString()}</td>
+                                            <td style={{ fontWeight: 700 }}>₹{(s.total || 0).toLocaleString()}</td>
                                             <td><span className={`badge badge-${s.payment_status?.toLowerCase()}`}>{s.payment_status}</span></td>
                                             <td>
                                                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

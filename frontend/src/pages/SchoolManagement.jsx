@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Building2, MapPin, Phone, Mail, Globe, Calendar, Clock, Edit2, Trash2, X, School as SchoolIcon, Layers, Settings, Users } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:8000';
 
 const SchoolManagement = () => {
+    const navigate = useNavigate();
     const [schools, setSchools] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isFeaturesModalOpen, setIsFeaturesModalOpen] = useState(false);
+    const [isUsersModalOpen, setIsUsersModalOpen] = useState(false);
+    const [selectedSchool, setSelectedSchool] = useState(null);
+    const [schoolFeatures, setSchoolFeatures] = useState({
+        transport: true, library: true, hostels: false, online_exams: true
+    });
     const [modalMode, setModalMode] = useState('add');
     const [currentSchool, setCurrentSchool] = useState({
         name: '', logo: '', branch: '', code: '', address: '', city: '', state: '', pin: '', 
@@ -160,11 +168,11 @@ const SchoolManagement = () => {
                                 </div>
                                 
                                 <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem' }}>
-                                    <button className="btn" style={{ flex: 1, border: '1px solid var(--border)', background: 'var(--surface-hover)', fontSize: '0.875rem' }}>
+                                    <button className="btn" style={{ flex: 1, border: '1px solid var(--border)', background: 'var(--surface-hover)', fontSize: '0.875rem' }} onClick={() => { setSelectedSchool(school); setIsFeaturesModalOpen(true); }}>
                                         <Settings size={16} />
                                         <span>Features</span>
                                     </button>
-                                    <button className="btn" style={{ flex: 1, border: '1px solid var(--border)', background: 'var(--surface-hover)', fontSize: '0.875rem' }}>
+                                    <button className="btn" style={{ flex: 1, border: '1px solid var(--border)', background: 'var(--surface-hover)', fontSize: '0.875rem' }} onClick={() => { setSelectedSchool(school); setIsUsersModalOpen(true); }}>
                                         <Users size={16} />
                                         <span>Staff Users</span>
                                     </button>
