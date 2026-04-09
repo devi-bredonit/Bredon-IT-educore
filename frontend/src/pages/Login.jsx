@@ -1,21 +1,34 @@
 import React, { useState } from 'react';
-import { User, Lock, ArrowRight } from 'lucide-react';
+import { User, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 
 const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Use mock user data based on common roles
-    const mockUser = {
-      username: username,
-      role: username === 'superadmin' ? 'Super Admin' : 
-            username === 'corporate' ? 'Corporate User' : 
-            'Administrator',
-      profile_name: username === 'superadmin' ? 'System Administrator' : 'Client Admin'
-    };
-    onLogin(mockUser);
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:8000/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password: password.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onLogin(data.user);
+      } else {
+        const err = await res.json();
+        setError(err.detail || 'Invalid username or password');
+      }
+    } catch (e) {
+      setError('Cannot connect to server. Please ensure the backend is running.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -73,14 +86,21 @@ const Login = ({ onLogin }) => {
             />
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
-            <span>Sign In</span>
+          <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }} disabled={loading}>
+            <span>{loading ? 'Signing in...' : 'Sign In'}</span>
             <ArrowRight size={20} />
           </button>
         </form>
 
-        <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-          <p>Login with <strong>superadmin</strong>, <strong>corporate</strong>, or <strong>admin</strong></p>
+        {error && (
+          <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ef4444', fontSize: '0.875rem', background: 'rgba(239,68,68,0.1)', padding: '0.75rem 1rem', borderRadius: '10px' }}>
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+          <p>EduCore+ School Management System</p>
         </div>
       </div>
     </div>

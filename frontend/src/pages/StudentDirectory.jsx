@@ -1,54 +1,91 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Download, UserPlus, Eye, Edit3, Trash2, X, Check, Camera, FileText, CreditCard } from 'lucide-react';
 
-const StudentDirectory = () => {
+const StudentDirectory = ({ user }) => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [students, setStudents] = useState([
-        { 
-            id: 1, 
-            name: 'Aryan Verma', 
-            admissionNo: 'ADM-1001', 
-            rollNo: '10',
-            class: '10', 
-            section: 'A', 
-            status: 'Paid', 
-            joined: '2023-06-15', 
-            fatherName: 'Rajesh Verma', 
-            fatherPhone: '9876543210', 
-            motherName: 'Sunita Verma',
-            motherPhone: '9876543211',
-            gender: 'Male', 
-            dob: '2010-05-12',
-            bloodGroup: 'O+',
-            email: 'aryan@example.com',
-            address: '123 Street, Delhi',
-            transport: 'Yes',
-            aadhar: '1234-5678-9012',
-            feeStructure: { tuition: 15000, transport: 5000, exam: 2000, misc: 1000 }
-        },
-        { 
-            id: 2, 
-            name: 'Isika Reddy', 
-            admissionNo: 'ADM-1002', 
-            rollNo: '15',
-            class: '9', 
-            section: 'B', 
-            status: 'Partial', 
-            joined: '2023-08-01', 
-            fatherName: 'Suresh Reddy', 
-            fatherPhone: '9876543211', 
-            motherName: 'Lata Reddy',
-            motherPhone: '9876543212',
-            gender: 'Female', 
-            dob: '2011-03-22',
-            bloodGroup: 'A+',
-            email: 'isika@example.com',
-            address: '45 Road, Mumbai',
-            transport: 'No',
-            aadhar: '9876-5432-1098',
-            feeStructure: { tuition: 15000, transport: 0, exam: 2000, misc: 1000 }
-        },
-    ]);
+    const [students, setStudents] = useState([]);
+    const [isIdCreated, setIsIdCreated] = useState(false);
+
+    const [schools, setSchools] = useState([]);
+    const [selectedSchoolId, setSelectedSchoolId] = useState(null);
+
+    const hasPermission = (perms) => {
+        if (user?.role === 'Super Admin') return true;
+        const storedRoles = localStorage.getItem('customRoles');
+        if (storedRoles) {
+            const parsedRoles = JSON.parse(storedRoles);
+            const matchedRole = parsedRoles.find(r => r.name === user?.role);
+            if (matchedRole && matchedRole.permissions) {
+                return perms.some(p => matchedRole.permissions.includes(p));
+            }
+        }
+        return false;
+    };
+
+    useEffect(() => {
+        const init = async () => {
+            await fetchSchools();
+            await fetchStudents();
+        };
+        init();
+    }, []);
+
+    useEffect(() => {
+        if (selectedSchoolId) {
+            fetchStudents();
+        }
+    }, [selectedSchoolId]);
+
+    const fetchSchools = async () => {
+        try {
+            const response = await fetch('http://localhost:8000/schools/');
+            if (response.ok) {
+                const data = await response.json();
+                setSchools(data);
+                if (data.length > 0 && !selectedSchoolId) {
+                    setSelectedSchoolId(data[0].id);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to fetch schools:", error);
+        }
+    };
+
+    const fetchStudents = async () => {
+        try {
+            const url = selectedSchoolId 
+                ? `http://localhost:8000/students/?school_id=${selectedSchoolId}`
+                : 'http://localhost:8000/students/';
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                const mappedData = data.map(s => ({
+                    ...s,
+                    admissionNo: s.admission_number,
+                    rollNo: s.roll_number,
+                    class: s.current_class,
+                    joined: s.admission_date,
+                    fatherName: s.father_name,
+                    fatherPhone: s.father_phone,
+                    motherName: s.mother_name,
+                    motherPhone: s.mother_phone,
+                    status: s.payment_status,
+                    bloodGroup: s.blood_group,
+                    address: s.permanent_address,
+                    commAddress: s.communication_address,
+                    aadhar: s.aadhar_number,
+                    transport: s.transport_required ? 'Yes' : 'No',
+                    medical: s.medical_conditions,
+                    prevSchool: s.previous_school,
+                    guardianName: s.guardian_details
+                }));
+                // Filter by school if necessary (handled by backend)
+                setStudents(mappedData);
+            }
+        } catch (error) {
+            console.error("Failed to fetch students:", error);
+        }
+    };
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('add');
@@ -65,8 +102,8 @@ const StudentDirectory = () => {
 
     const filtered = students.filter(s => {
         const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                             s.admissionNo.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesClass = filterClass === '' || s.class.toString() === filterClass;
+                             (s.admissionNo && s.admissionNo.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesClass = filterClass === '' || (s.class && s.class.toString() === filterClass);
         return matchesSearch && matchesClass;
     });
 
@@ -92,19 +129,91 @@ const StudentDirectory = () => {
         setIsModalOpen(true);
     };
 
-    const handleSave = (e) => {
+    const handleSave = async (e) => {
         e.preventDefault();
-        if (modalMode === 'add') {
-            setStudents([...students, { ...currentStudent, id: Date.now() }]);
-        } else if (modalMode === 'edit') {
-            setStudents(students.map(s => s.id === currentStudent.id ? currentStudent : s));
+        
+        if (!selectedSchoolId) {
+            alert("Please ensure at least one school exists before adding students.");
+            return;
         }
-        setIsModalOpen(false);
+
+        const payload = {
+            school_id: selectedSchoolId,
+            name: currentStudent.name,
+            admission_number: currentStudent.admissionNo,
+            roll_number: currentStudent.rollNo,
+            dob: currentStudent.dob,
+            gender: currentStudent.gender,
+            blood_group: currentStudent.bloodGroup,
+            photo_url: currentStudent.photo,
+            current_class: currentStudent.class,
+            section: currentStudent.section,
+            admission_date: currentStudent.joined,
+            previous_school: currentStudent.prevSchool,
+            father_name: currentStudent.fatherName,
+            father_phone: currentStudent.fatherPhone,
+            mother_name: currentStudent.motherName,
+            mother_phone: currentStudent.motherPhone,
+            guardian_details: currentStudent.guardianName,
+            email: currentStudent.email,
+            permanent_address: currentStudent.address,
+            communication_address: currentStudent.commAddress,
+            aadhar_number: currentStudent.aadhar,
+            transport_required: currentStudent.transport === 'Yes',
+            medical_conditions: currentStudent.medical,
+            documents_url: '', 
+            joining_date: currentStudent.joined,
+            payment_status: currentStudent.status
+        };
+
+        try {
+            if (modalMode === 'add') {
+                const response = await fetch('http://localhost:8000/students/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) {
+                    fetchStudents();
+                    setIsModalOpen(false);
+                } else {
+                    const err = await response.json();
+                    alert(`Failed to create student: ${JSON.stringify(err.detail)}`);
+                }
+            } else if (modalMode === 'edit') {
+                const response = await fetch(`http://localhost:8000/students/${currentStudent.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) {
+                    fetchStudents();
+                    setIsModalOpen(false);
+                } else {
+                    alert("Failed to update student.");
+                }
+            }
+        } catch (error) {
+            console.error("Error saving student:", error);
+            alert("Connection error.");
+        }
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this student record?')) {
-            setStudents(students.filter(s => s.id !== id));
+            try {
+                const response = await fetch(`http://localhost:8000/students/${id}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    fetchStudents();
+                } else {
+                    alert("Failed to delete student.");
+                }
+            } catch (error) {
+                console.error("Error deleting student:", error);
+                alert("Connection error.");
+            }
         }
     };
 
@@ -134,10 +243,12 @@ const StudentDirectory = () => {
                     <p>Onboard and manage detailed academic student profiles</p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
-                        <UserPlus size={20} />
-                        <span>Add Student</span>
-                    </button>
+                    {hasPermission(['edit_students']) && (
+                        <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
+                            <UserPlus size={20} />
+                            <span>Add Student</span>
+                        </button>
+                    )}
                     <button className="btn" onClick={handleExportData} style={{ background: 'var(--surface-hover)', border: '1px solid var(--border)' }}>
                         <Download size={20} />
                         <span>Export Full Data</span>
@@ -210,12 +321,16 @@ const StudentDirectory = () => {
                                         <button onClick={() => handleOpenModal('view', s)} title="View" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'transparent' }}>
                                             <Eye size={18} />
                                         </button>
-                                        <button onClick={() => handleOpenModal('edit', s)} title="Edit" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'transparent' }}>
-                                            <Edit3 size={18} />
-                                        </button>
-                                        <button onClick={() => handleDelete(s.id)} title="Delete" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
-                                            <Trash2 size={18} />
-                                        </button>
+                                        {hasPermission(['edit_students']) && (
+                                            <button onClick={() => handleOpenModal('edit', s)} title="Edit" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'transparent' }}>
+                                                <Edit3 size={18} />
+                                            </button>
+                                        )}
+                                        {hasPermission(['delete_students']) && (
+                                            <button onClick={() => handleDelete(s.id)} title="Delete" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
+                                                <Trash2 size={18} />
+                                            </button>
+                                        )}
                                     </div>
                                 </td>
                             </tr>
