@@ -1,68 +1,130 @@
-from sqlalchemy import Column, Integer, String, Date, Boolean, ForeignKey, Text
-from app.database import Base
+from sqlalchemy import Column, Integer, String, Boolean, Date, Float, ForeignKey, Text
+from sqlalchemy.orm import relationship
+from .database import Base
 
 class School(Base):
     __tablename__ = "schools"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), index=True)
-    branch = Column(String(255), nullable=True)
-    code = Column(String(50))
-    address = Column(String(500))
+    name = Column(String(255), nullable=False)
+    logo = Column(Text, nullable=True) # Store logo URL or base64
+    branch = Column(String(255))
+    code = Column(String(50), unique=True)
+    address = Column(Text)
     city = Column(String(100))
     state = Column(String(100))
     pin = Column(String(20))
-    contact = Column(String(100))
+    contact = Column(String(50))
     email = Column(String(255))
-    website = Column(String(255), nullable=True)
-    affiliation = Column(String(100))
-    type = Column(String(100))
-    academic_year = Column(String(50))
+    website = Column(String(255))
+    affiliation = Column(String(100)) # CBSE / ICSE / etc.
+    type = Column(String(100)) # Day / Boarding / Co-ed
+    academic_year = Column(String(50)) # e.g. "2024–2025" or "April–March"
     timezone = Column(String(50))
-    logo = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True)
-
-class Student(Base):
-    __tablename__ = "students"
-
-    id = Column(Integer, primary_key=True, index=True)
-    school_id = Column(Integer, ForeignKey("schools.id"), nullable=True)
-    name = Column(String(255))
-    admission_number = Column(String(100), unique=True)
-    roll_number = Column(String(50), nullable=True)
-    dob = Column(Date)
-    gender = Column(String(50))
-    blood_group = Column(String(20))
-    photo_url = Column(String(500), nullable=True)
-    current_class = Column(String(50))
-    section = Column(String(50))
-    admission_date = Column(Date)
-    previous_school = Column(String(255), nullable=True)
-    father_name = Column(String(255))
-    father_phone = Column(String(50))
-    mother_name = Column(String(255))
-    mother_phone = Column(String(50))
-    guardian_details = Column(String(500), nullable=True)
-    email = Column(String(255))
-    permanent_address = Column(String(500))
-    communication_address = Column(String(500), nullable=True)
-    aadhar_number = Column(String(50), nullable=True)
-    transport_required = Column(Boolean, default=False)
-    medical_conditions = Column(String(500), nullable=True)
-    documents_url = Column(String(500), nullable=True)
-    joining_date = Column(Date)
-    payment_status = Column(String(50), default="Pending")
 
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     school_id = Column(Integer, ForeignKey("schools.id"), nullable=True)
-    username = Column(String(255), unique=True)
+    username = Column(String(255), unique=True, index=True)
     password = Column(String(255))
-    role = Column(String(50))
+    role = Column(String(50)) # Super Admin, Corporate User, Admin User
     profile_name = Column(String(255))
-    phone = Column(String(20), nullable=True)
-    email = Column(String(255), nullable=True)
+    phone = Column(String(20))
+    email = Column(String(255))
     is_active = Column(Boolean, default=True)
-    permissions = Column(Text, nullable=True)
+    permissions = Column(Text, nullable=True) # JSON string of permissions/rights
+
+class Student(Base):
+    __tablename__ = "students"
+
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id"))
+    name = Column(String(255), nullable=False)
+    admission_number = Column(String(50), unique=True)
+    roll_number = Column(String(50))
+    dob = Column(Date)
+    gender = Column(String(20))
+    blood_group = Column(String(10))
+    photo_url = Column(Text, nullable=True)
+    current_class = Column(String(50))
+    section = Column(String(50))
+    admission_date = Column(Date)
+    previous_school = Column(String(255))
+    father_name = Column(String(255))
+    father_phone = Column(String(20))
+    mother_name = Column(String(255))
+    mother_phone = Column(String(20))
+    guardian_details = Column(Text)
+    email = Column(String(255))
+    permanent_address = Column(Text)
+    communication_address = Column(Text)
+    aadhar_number = Column(String(50))
+    transport_required = Column(Boolean, default=False)
+    medical_conditions = Column(Text)
+    documents_url = Column(Text) # JSON mapping of document names to URLs
+    joining_date = Column(Date)
+    payment_status = Column(String(50), default="Pending")
+    
+    # Fee structure (Annual totals)
+    tuition = Column(Float, default=0.0)
+    transport = Column(Float, default=0.0)
+    exam = Column(Float, default=0.0)
+    misc = Column(Float, default=0.0)
+    total = Column(Float, default=0.0)
+    paid = Column(Float, default=0.0)
+
+    fee_allocations = relationship("StudentFee", back_populates="student")
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id"), nullable=True)
+    student_id = Column(Integer, ForeignKey("students.id"))
+    student_name = Column(String(255))
+    fee_type = Column(String(100)) # Tuition, Transport, Exam, Misc
+    amount_paid = Column(Float)
+    discount_type = Column(String(100)) # General, Sibling, Teacher, Others
+    payment_mode = Column(String(50)) # Cash, UPI, Bank Transfer
+    remarks = Column(Text)
+    payment_date = Column(Date)
+    transaction_id = Column(String(255), nullable=True)
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=True)
+    action = Column(String(255)) # e.g. "Record Payment", "Create Student"
+    details = Column(Text)
+    timestamp = Column(Date)
+
+class FeeHead(Base):
+    __tablename__ = "fee_heads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id"))
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+
+    school = relationship("School")
+
+class StudentFee(Base):
+    __tablename__ = "student_fees"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"))
+    fee_head_id = Column(Integer, ForeignKey("fee_heads.id"))
+    amount = Column(Float, default=0.0)
+
+    student = relationship("Student", back_populates="fee_allocations")
+    fee_head = relationship("FeeHead")
+
+# Update Student class with relationship
+# Note: I need to add this to the Student class above where it's defined

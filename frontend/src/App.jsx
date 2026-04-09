@@ -7,6 +7,8 @@ import FeePanel from './pages/FeePanel';
 import SchoolManagement from './pages/SchoolManagement';
 import UserManagement from './pages/UserManagement';
 import RoleManagement from './pages/RoleManagement';
+import FeeSettings from './pages/FeeSettings';
+import RegisterSchool from './pages/RegisterSchool';
 import Login from './pages/Login';
 
 const App = () => {
@@ -23,7 +25,14 @@ const App = () => {
   };
 
   if (!user) {
-    return <Login onLogin={handleLogin} />;
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/register" element={<RegisterSchool />} />
+          <Route path="*" element={<Login onLogin={handleLogin} />} />
+        </Routes>
+      </BrowserRouter>
+    );
   }
 
   // Role-based default redirect after login
@@ -64,6 +73,12 @@ const App = () => {
           <Route path="users" element={
             hasPermission(['create_user', 'create_corporate']) || user.role === 'Corporate User' ? <UserManagement user={user} /> : <Navigate to="/" replace />
           } />
+          <Route index element={<Dashboard />} />
+          <Route path="students" element={<StudentDirectory />} />
+          <Route path="fees" element={<FeePanel />} />
+          <Route path="schools" element={<SchoolManagement />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="fee-settings" element={<FeeSettings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

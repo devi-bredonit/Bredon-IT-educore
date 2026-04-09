@@ -128,7 +128,7 @@ const UserManagement = () => {
             <header className="page-header">
                 <div className="title-group">
                     <h1>User Management</h1>
-                    <p>Assign roles and manage access control for your staff</p>
+                    <p>{isSuperAdmin ? 'Global system users and corporate onboarding' : 'Manage your school staff and access rights'}</p>
                 </div>
                 <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
                     <UserPlus size={20} />
