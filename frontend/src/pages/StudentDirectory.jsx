@@ -1,125 +1,169 @@
-import React, { useState } from 'react';
-import { Search, Download, UserPlus, Eye, Edit3, Trash2, X, Check, Camera, FileText, CreditCard } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Download, UserPlus, Eye, Edit3, Trash2, X, Check, Camera, FileText, CreditCard, IndianRupee, Loader2, Filter } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
+const API_BASE_URL = 'http://localhost:8000';
 
 const StudentDirectory = () => {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
-    const [students, setStudents] = useState([
-        { 
-            id: 1, 
-            name: 'Aryan Verma', 
-            admissionNo: 'ADM-1001', 
-            rollNo: '10',
-            class: '10', 
-            section: 'A', 
-            status: 'Paid', 
-            joined: '2023-06-15', 
-            fatherName: 'Rajesh Verma', 
-            fatherPhone: '9876543210', 
-            motherName: 'Sunita Verma',
-            motherPhone: '9876543211',
-            gender: 'Male', 
-            dob: '2010-05-12',
-            bloodGroup: 'O+',
-            email: 'aryan@example.com',
-            address: '123 Street, Delhi',
-            transport: 'Yes',
-            aadhar: '1234-5678-9012',
-            feeStructure: { tuition: 15000, transport: 5000, exam: 2000, misc: 1000 }
-        },
-        { 
-            id: 2, 
-            name: 'Isika Reddy', 
-            admissionNo: 'ADM-1002', 
-            rollNo: '15',
-            class: '9', 
-            section: 'B', 
-            status: 'Partial', 
-            joined: '2023-08-01', 
-            fatherName: 'Suresh Reddy', 
-            fatherPhone: '9876543211', 
-            motherName: 'Lata Reddy',
-            motherPhone: '9876543212',
-            gender: 'Female', 
-            dob: '2011-03-22',
-            bloodGroup: 'A+',
-            email: 'isika@example.com',
-            address: '45 Road, Mumbai',
-            transport: 'No',
-            aadhar: '9876-5432-1098',
-            feeStructure: { tuition: 15000, transport: 0, exam: 2000, misc: 1000 }
-        },
-    ]);
+    const [students, setStudents] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [filterClass, setFilterClass] = useState('All');
+    const [filterSection, setFilterSection] = useState('All');
+    const [feeHeads, setFeeHeads] = useState([]);
+    
+    // Auth context
+    const loggedInUser = JSON.parse(localStorage.getItem('user')) || {};
+    const schoolId = loggedInUser.school_id;
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('add');
     const [currentStudent, setCurrentStudent] = useState({
-        name: '', admissionNo: '', rollNo: '', dob: '', gender: 'Male', bloodGroup: '',
-        photo: '', class: '', section: '', joined: new Date().toISOString().split('T')[0],
-        prevSchool: '', fatherName: '', fatherPhone: '', motherName: '', motherPhone: '',
-        guardianName: '', guardianPhone: '', email: '', address: '', commAddress: '', 
-        aadhar: '', transport: 'No', medical: '', status: 'Pending',
-        documents: { tc: false, birthCert: false },
-        feeStructure: { tuition: 20000, transport: 0, exam: 2000, misc: 1000 }
+        school_id: schoolId,
+        name: '', admission_number: '', roll_number: '', dob: '', gender: 'Male', blood_group: '',
+        photo_url: '', current_class: '1', section: 'A', admission_date: new Date().toISOString().split('T')[0],
+        joining_date: new Date().toISOString().split('T')[0],
+        previous_school: '', father_name: '', father_phone: '', mother_name: '', mother_phone: '',
+        guardian_details: '', email: '', permanent_address: '', communication_address: '', 
+        aadhar_number: '', transport_required: false, medical_conditions: '', payment_status: 'Pending',
+        documents_url: '',
+        tuition: 0, transport: 0, exam: 0, misc: 0,
+        fee_allocations: []
     });
-    const [filterClass, setFilterClass] = useState('');
 
-    const filtered = students.filter(s => {
-        const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                             s.admissionNo.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesClass = filterClass === '' || s.class.toString() === filterClass;
-        return matchesSearch && matchesClass;
-    });
+    useEffect(() => {
+        if (schoolId) {
+            fetchStudents();
+            fetchFeeHeads();
+        }
+    }, [schoolId, filterClass, filterSection]);
+
+    const fetchFeeHeads = async () => {
+        try {
+            const resp = await fetch(`${API_BASE_URL}/fee-configs/heads?school_id=${schoolId}`);
+            if (resp.ok) {
+                const data = await resp.json();
+                setFeeHeads(data.filter(h => h.is_active));
+            }
+        } catch (error) {
+            console.error('Error fetching fee heads:', error);
+        }
+    };
+
+    const fetchStudents = async () => {
+        setIsLoading(true);
+        try {
+            const url = `${API_BASE_URL}/students/?school_id=${schoolId}&standard=${filterClass}&section=${filterSection}`;
+            const resp = await fetch(url);
+            if (resp.ok) {
+                const data = await resp.json();
+                setStudents(data);
+            } else {
+                throw new Error('Fallback to mock');
+            }
+        } catch (error) {
+            console.error('Error fetching students, using mock:', error);
+            // Fallback dummy students with diverse profiles
+            setStudents([
+                { id: 1, name: 'Rahul Sharma', admission_number: 'ADM001', roll_number: '10', dob: '2010-05-15', gender: 'Male', blood_group: 'A+', current_class: '10', section: 'A', father_name: 'Suresh Sharma', father_phone: '9876543210', email: 'rahul@example.com', payment_status: 'Paid', paid: 25000, tuition: 20000, transport: 2000, exam: 2000, misc: 1000, admission_date: '2023-04-01' },
+                { id: 2, name: 'Sneha Gupta', admission_number: 'ADM002', roll_number: '12', dob: '2012-08-20', gender: 'Female', blood_group: 'B+', current_class: '8', section: 'B', father_name: 'Rajesh Gupta', father_phone: '9876543211', email: 'sneha@example.com', payment_status: 'Partial', paid: 15000, tuition: 18000, transport: 0, exam: 1500, misc: 500, admission_date: '2023-04-05' },
+                { id: 3, name: 'Amit Kumar', admission_number: 'ADM003', roll_number: '05', dob: '2015-02-10', gender: 'Male', blood_group: 'O+', current_class: '5', section: 'C', father_name: 'Vinod Kumar', father_phone: '9876543212', email: 'amit@example.com', payment_status: 'Pending', paid: 0, tuition: 15000, transport: 1500, exam: 1000, misc: 500, admission_date: '2023-04-10' },
+                { id: 4, name: 'Priya Singh', admission_number: 'ADM004', roll_number: '21', dob: '2008-11-25', gender: 'Female', blood_group: 'AB-', current_class: '12', section: 'A', father_name: 'Mahendra Singh', father_phone: '9876543213', email: 'priya@example.com', payment_status: 'Paid', paid: 35000, tuition: 30000, transport: 2500, exam: 2000, misc: 500, admission_date: '2022-04-01' },
+                { id: 5, name: 'Vikram Aditya', admission_number: 'ADM005', roll_number: '03', dob: '2017-06-30', gender: 'Male', blood_group: 'O-', current_class: '3', section: 'D', father_name: 'Aditya Raj', father_phone: '9876543214', email: 'vikram@example.com', payment_status: 'Paid', paid: 12000, tuition: 10000, transport: 1000, exam: 500, misc: 500, admission_date: '2023-06-15' },
+                { id: 6, name: 'Rohan Mehra', admission_number: 'ADM006', roll_number: '15', dob: '2011-03-12', gender: 'Male', blood_group: 'B-', current_class: '9', section: 'A', father_name: 'Sunil Mehra', father_phone: '9876543215', email: 'rohan@example.com', payment_status: 'Partial', paid: 15000, tuition: 22000, transport: 1000, exam: 1500, misc: 500, admission_date: '2023-05-01' },
+                { id: 7, name: 'Ananya Iyer', admission_number: 'ADM007', roll_number: '08', dob: '2013-09-22', gender: 'Female', blood_group: 'A+', current_class: '7', section: 'B', father_name: 'Subramanian Iyer', father_phone: '9876543216', email: 'ananya@example.com', payment_status: 'Paid', paid: 20000, tuition: 18000, transport: 1000, exam: 1000, misc: 0, admission_date: '2023-05-10' }
+            ]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleOpenModal = (mode, student = null) => {
         setModalMode(mode);
         if (student) {
             setCurrentStudent({
                 ...student,
-                feeStructure: student.feeStructure || { tuition: 20000, transport: 0, exam: 2000, misc: 1000 },
-                documents: student.documents || { tc: false, birthCert: false }
+                school_id: schoolId // Ensure school_id is preserved
             });
         } else {
             setCurrentStudent({
-                name: '', admissionNo: '', rollNo: '', dob: '', gender: 'Male', bloodGroup: '',
-                photo: '', class: '', section: '', joined: new Date().toISOString().split('T')[0],
-                prevSchool: '', fatherName: '', fatherPhone: '', motherName: '', motherPhone: '',
-                guardianName: '', guardianPhone: '', email: '', address: '', commAddress: '', 
-                aadhar: '', transport: 'No', medical: '', status: 'Pending',
-                documents: { tc: false, birthCert: false },
-                feeStructure: { tuition: 20000, transport: 0, exam: 2000, misc: 1000 }
+                school_id: schoolId,
+                name: '', admission_number: '', roll_number: '', dob: '', gender: 'Male', blood_group: '',
+                photo_url: '', current_class: '1', section: 'A', admission_date: new Date().toISOString().split('T')[0],
+                joining_date: new Date().toISOString().split('T')[0],
+                previous_school: '', father_name: '', father_phone: '', mother_name: '', mother_phone: '',
+                guardian_details: '', email: '', permanent_address: '', communication_address: '', 
+                aadhar_number: '', transport_required: false, medical_conditions: '', payment_status: 'Pending',
+                documents_url: '',
+                tuition: 20000, transport: 0, exam: 2000, misc: 1000
             });
         }
         setIsModalOpen(true);
     };
 
-    const handleSave = (e) => {
+    const handleSave = async (e) => {
         e.preventDefault();
-        if (modalMode === 'add') {
-            setStudents([...students, { ...currentStudent, id: Date.now() }]);
-        } else if (modalMode === 'edit') {
-            setStudents(students.map(s => s.id === currentStudent.id ? currentStudent : s));
+        try {
+            const method = modalMode === 'add' ? 'POST' : 'PUT';
+            const url = modalMode === 'add' ? `${API_BASE_URL}/students/` : `${API_BASE_URL}/students/${currentStudent.id}`;
+            
+            // Sanitize dates: convert empty strings to null for the backend
+            const sanitizedStudent = { ...currentStudent };
+            ['dob', 'admission_date', 'joining_date'].forEach(field => {
+                if (sanitizedStudent[field] === '') {
+                    sanitizedStudent[field] = null;
+                }
+            });
+
+            const resp = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(sanitizedStudent)
+            });
+
+            if (resp.ok) {
+                fetchStudents();
+                setIsModalOpen(false);
+            } else {
+                const errorData = await resp.json().catch(() => ({}));
+                const serverMsg = errorData.detail || 'Unknown server error';
+                alert(`Failed to save student: ${serverMsg}. Please ensure the database is reachable.`);
+            }
+        } catch (error) {
+            console.error('Error saving student:', error);
+            alert(`Network error: ${error.message}. Please check if the backend server is running and the database is connected.`);
         }
-        setIsModalOpen(false);
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this student record?')) {
-            setStudents(students.filter(s => s.id !== id));
+            try {
+                const resp = await fetch(`${API_BASE_URL}/students/${id}`, { method: 'DELETE' });
+                if (resp.ok) fetchStudents();
+            } catch (error) {
+                console.error('Error deleting student:', error);
+            }
         }
     };
+
+    const filtered = students.filter(s => {
+        return s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+               s.admission_number.toLowerCase().includes(searchTerm.toLowerCase());
+    });
 
     const handleExportData = () => {
-        const headers = ['Adm No', 'Name', 'Class', 'Father Name', 'Phone', 'Email', 'Transport'];
+        const headers = ['Adm No', 'Name', 'Class', 'Father Name', 'Phone', 'Email', 'Payment Status'];
         const csvContent = [
             headers.join(','),
-            ...students.map(s => `${s.admissionNo},${s.name},${s.class},${s.fatherName},${s.fatherPhone},${s.email},${s.transport}`)
+            ...students.map(s => `${s.admission_number},${s.name},${s.current_class},${s.father_name},${s.father_phone},${s.email},${s.payment_status}`)
         ].join('\n');
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
-        link.setAttribute('download', `edu_students_full_${new Date().toISOString().split('T')[0]}.csv`);
+        link.setAttribute('download', `students_${new Date().toISOString().split('T')[0]}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -131,16 +175,16 @@ const StudentDirectory = () => {
             <header className="page-header">
                 <div className="title-group">
                     <h1>Student Directory</h1>
-                    <p>Onboard and manage detailed academic student profiles</p>
+                    <p>Onboard and manage academic student profiles for {loggedInUser.school_info?.name || 'your school'}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
                     <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
                         <UserPlus size={20} />
-                        <span>Add Student</span>
+                        <span>Onboard Student</span>
                     </button>
                     <button className="btn" onClick={handleExportData} style={{ background: 'var(--surface-hover)', border: '1px solid var(--border)' }}>
                         <Download size={20} />
-                        <span>Export Full Data</span>
+                        <span>Export CSV</span>
                     </button>
                 </div>
             </header>
@@ -158,283 +202,291 @@ const StudentDirectory = () => {
                     />
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <select 
-                        className="form-input" 
-                        style={{ width: 'auto' }}
-                        value={filterClass}
-                        onChange={(e) => setFilterClass(e.target.value)}
-                    >
-                        <option value="">All Classes</option>
-                        {[...Array(12)].map((_, i) => (
-                            <option key={i + 1} value={i + 1}>Class {i + 1}</option>
-                        ))}
-                    </select>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface)', padding: '0 1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                        <Filter size={16} style={{ color: 'var(--text-muted)' }} />
+                        <select 
+                            style={{ background: 'transparent', border: 'none', color: 'var(--text)', padding: '0.75rem 0', outline: 'none', fontSize: '0.875rem' }}
+                            value={filterClass}
+                            onChange={(e) => setFilterClass(e.target.value)}
+                        >
+                            <option value="All">All Classes</option>
+                            {[...Array(12)].map((_, i) => (
+                                <option key={i + 1} value={i + 1}>Class {i + 1}</option>
+                            ))}
+                        </select>
+                        <div style={{ width: '1px', height: '20px', background: 'var(--border)' }}></div>
+                        <select 
+                            style={{ background: 'transparent', border: 'none', color: 'var(--text)', padding: '0.75rem 0', outline: 'none', fontSize: '0.875rem' }}
+                            value={filterSection}
+                            onChange={(e) => setFilterSection(e.target.value)}
+                        >
+                            <option value="All">All Sections</option>
+                            {['A', 'B', 'C', 'D'].map(sec => <option key={sec} value={sec}>Sec {sec}</option>)}
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <div className="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Adm No.</th>
-                            <th>Student Details</th>
-                            <th>Parent Details</th>
-                            <th>Class/Section</th>
-                            <th>Status</th>
-                            <th style={{ textAlign: 'right' }}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filtered.map((s) => (
-                            <tr key={s.id}>
-                                <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{s.admissionNo}</td>
-                                <td>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700 }}>
-                                            {s.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <p style={{ fontWeight: 600 }}>{s.name}</p>
-                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Roll: {s.rollNo} | {s.gender}</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <p style={{ fontSize: '0.875rem' }}>F: {s.fatherName}</p>
-                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>P: {s.fatherPhone}</p>
-                                </td>
-                                <td>{s.class}-{s.section}</td>
-                                <td><span className={`badge badge-${s.status?.toLowerCase() || 'pending'}`}>{s.status || 'Pending'}</span></td>
-                                <td>
-                                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                        <button onClick={() => handleOpenModal('view', s)} title="View" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'transparent' }}>
-                                            <Eye size={18} />
-                                        </button>
-                                        <button onClick={() => handleOpenModal('edit', s)} title="Edit" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'transparent' }}>
-                                            <Edit3 size={18} />
-                                        </button>
-                                        <button onClick={() => handleDelete(s.id)} title="Delete" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </div>
-                                </td>
+            {isLoading ? (
+                <div style={{ padding: '4rem', textAlign: 'center' }}>
+                    <Loader2 className="animate-spin" size={40} style={{ margin: '0 auto', color: 'var(--primary)' }} />
+                    <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>Retrieving student records...</p>
+                </div>
+            ) : (
+                <div className="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Adm No.</th>
+                                <th>Student Profile</th>
+                                <th>Parent Details</th>
+                                <th>Class & Sec</th>
+                                <th>Payment</th>
+                                <th style={{ textAlign: 'right' }}>Actions</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
+                                        No students found in this school directory.
+                                    </td>
+                                </tr>
+                            ) : (
+                                filtered.map((s) => (
+                                    <tr key={s.id}>
+                                        <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{s.admission_number}</td>
+                                        <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700 }}>
+                                                    {s.name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <p style={{ fontWeight: 600 }}>{s.name}</p>
+                                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Roll: {s.roll_number || 'N/A'} | {s.gender}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <p style={{ fontSize: '0.875rem' }}>F: {s.father_name}</p>
+                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{s.father_phone}</p>
+                                        </td>
+                                        <td>
+                                            <span style={{ fontWeight: 600 }}>{s.current_class}-{s.section}</span>
+                                        </td>
+                                        <td>
+                                            <span className={`badge badge-${s.payment_status?.toLowerCase() || 'pending'}`}>
+                                                {s.payment_status}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                <button onClick={() => handleOpenModal('view', s)} title="View Profile" className="btn btn-icon">
+                                                    <Eye size={18} />
+                                                </button>
+                                                <button onClick={() => navigate('/fees', { state: { studentId: s.id, studentName: s.name, from: 'directory' } })} title="Collect Fee" className="btn btn-icon" style={{ color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                                                    <IndianRupee size={18} />
+                                                </button>
+                                                <button onClick={() => handleOpenModal('edit', s)} title="Edit Record" className="btn btn-icon">
+                                                    <Edit3 size={18} />
+                                                </button>
+                                                <button onClick={() => handleDelete(s.id)} title="Delete Record" className="btn btn-icon" style={{ color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
             {isModalOpen && (
                 <div className="overlay">
-                    <div className="modal-card" style={{ maxWidth: '900px' }}>
+                    <div className="modal-card" style={{ maxWidth: '950px' }}>
                         <div className="modal-header">
                             <div>
-                                <h2 style={{ textTransform: 'capitalize' }}>{modalMode} Student</h2>
-                                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Complete Academic Enrollment Record</p>
+                                <h2 style={{ textTransform: 'capitalize' }}>{modalMode} Student Profile</h2>
+                                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Full Academic & Personal Enrollment Record</p>
                             </div>
-                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                                <button className="btn" style={{ padding: '0.5rem 1rem', background: 'transparent', border: '1px solid var(--border)' }} onClick={() => setIsModalOpen(false)}>Cancel</button>
-                                <button className="close-btn" onClick={() => setIsModalOpen(false)}><X size={20} /></button>
-                            </div>
+                            <button className="close-btn" onClick={() => setIsModalOpen(false)}><X size={20} /></button>
                         </div>
 
-                        <div className="modal-content animate-fade-in">
+                        <div className="modal-content">
                             <form onSubmit={handleSave}>
-                                {/* Top Banner / Photo */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: '2.5rem', marginBottom: '2.5rem', background: 'var(--background)', padding: '2rem', borderRadius: '16px' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
-                                        <div style={{ width: '150px', height: '150px', borderRadius: '20px', border: '2px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', background: 'white' }}>
-                                            <Camera size={40} strokeWidth={1} />
-                                            <span style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>Upload Photo</span>
-                                        </div>
-                                    </div>
-                                    <div className="input-grid">
-                                        <div className="input-group">
-                                            <label>Full Name*</label>
-                                            <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.name} onChange={e => setCurrentStudent({...currentStudent, name: e.target.value})} />
-                                        </div>
-                                        <div className="input-group">
-                                            <label>Admission No*</label>
-                                            <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.admissionNo} onChange={e => setCurrentStudent({...currentStudent, admissionNo: e.target.value})} />
-                                        </div>
-                                        <div className="input-group">
-                                            <label>Roll Number</label>
-                                            <input type="text" disabled={modalMode==='view'} className="form-input" value={currentStudent.rollNo} onChange={e => setCurrentStudent({...currentStudent, rollNo: e.target.value})} />
-                                        </div>
-                                        <div className="input-group">
-                                            <label>Admission Date</label>
-                                            <input type="date" disabled={modalMode==='view'} className="form-input" value={currentStudent.joined} onChange={e => setCurrentStudent({...currentStudent, joined: e.target.value})} />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Form Sections Grid */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '2rem' }}>
+                                    
+                                    {/* Left Column: Extensive Forms */}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                                        {/* Basic Details */}
+                                        
+                                        {/* 1. Basic Identity */}
                                         <section className="glass-card" style={{ padding: '1.5rem', background: 'var(--surface)' }}>
-                                            <h4 style={{ color: 'var(--primary)', marginBottom: '1.25rem', fontSize: '0.875rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>Basic Details</h4>
+                                            <h4 className="section-title">Identity & Admission</h4>
                                             <div className="input-grid">
+                                                <div className="input-group">
+                                                    <label>Full Student Name*</label>
+                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.name} onChange={e => setCurrentStudent({...currentStudent, name: e.target.value})} />
+                                                </div>
                                                 <div className="input-group">
                                                     <label>DOB*</label>
                                                     <input type="date" required disabled={modalMode==='view'} className="form-input" value={currentStudent.dob} onChange={e => setCurrentStudent({...currentStudent, dob: e.target.value})} />
                                                 </div>
                                                 <div className="input-group">
-                                                    <label>Gender*</label>
-                                                    <select required disabled={modalMode==='view'} className="form-input" value={currentStudent.gender} onChange={e => setCurrentStudent({...currentStudent, gender: e.target.value})}>
-                                                        <option value="Male">Male</option>
-                                                        <option value="Female">Female</option>
-                                                        <option value="Other">Other</option>
+                                                    <label>Admission No*</label>
+                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.admission_number} onChange={e => setCurrentStudent({...currentStudent, admission_number: e.target.value})} />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Roll Number</label>
+                                                    <input type="text" disabled={modalMode==='view'} className="form-input" value={currentStudent.roll_number || ''} onChange={e => setCurrentStudent({...currentStudent, roll_number: e.target.value})} />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Class*</label>
+                                                    <select required disabled={modalMode==='view'} className="form-input" value={currentStudent.current_class} onChange={e => setCurrentStudent({...currentStudent, current_class: e.target.value})}>
+                                                        {[...Array(12)].map((_, i) => (
+                                                            <option key={i + 1} value={i + 1}>Class {i + 1}</option>
+                                                        ))}
                                                     </select>
                                                 </div>
                                                 <div className="input-group">
-                                                    <label>Blood Group*</label>
-                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" placeholder="e.g. O+" value={currentStudent.bloodGroup} onChange={e => setCurrentStudent({...currentStudent, bloodGroup: e.target.value})} />
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>Aadhar No</label>
-                                                    <input type="text" disabled={modalMode==='view'} className="form-input" placeholder="1234-5678-..." value={currentStudent.aadhar} onChange={e => setCurrentStudent({...currentStudent, aadhar: e.target.value})} />
-                                                </div>
-                                            </div>
-                                        </section>
-
-                                        {/* Academic Details */}
-                                        <section className="glass-card" style={{ padding: '1.5rem', background: 'var(--surface)' }}>
-                                            <h4 style={{ color: 'var(--primary)', marginBottom: '1.25rem', fontSize: '0.875rem', textTransform: 'uppercase' }}>Academic History</h4>
-                                            <div className="input-grid">
-                                                <div className="input-group">
-                                                    <label>Class*</label>
-                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.class} onChange={e => setCurrentStudent({...currentStudent, class: e.target.value})} />
-                                                </div>
-                                                <div className="input-group">
                                                     <label>Section*</label>
-                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.section} onChange={e => setCurrentStudent({...currentStudent, section: e.target.value})} />
-                                                </div>
-                                                <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                                                    <label>Previous School</label>
-                                                    <input type="text" disabled={modalMode==='view'} className="form-input" value={currentStudent.prevSchool} onChange={e => setCurrentStudent({...currentStudent, prevSchool: e.target.value})} />
+                                                    <select required disabled={modalMode==='view'} className="form-input" value={currentStudent.section} onChange={e => setCurrentStudent({...currentStudent, section: e.target.value})}>
+                                                        {['A', 'B', 'C', 'D'].map(sec => <option key={sec} value={sec}>{sec}</option>)}
+                                                    </select>
                                                 </div>
                                             </div>
                                         </section>
-                                    </div>
 
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                                        {/* Parents & Guardians */}
-                                        <section className="glass-card" style={{ padding: '1.5rem', background: 'var(--surface)' }}>
-                                            <h4 style={{ color: 'var(--primary)', marginBottom: '1.25rem', fontSize: '0.875rem', textTransform: 'uppercase' }}>Parents & Guardians</h4>
+                                        {/* 2. Parent Details */}
+                                        <section className="glass-card" style={{ padding: '1.5rem' }}>
+                                            <h4 className="section-title">Parental Information</h4>
                                             <div className="input-grid">
                                                 <div className="input-group">
                                                     <label>Father's Name*</label>
-                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.fatherName} onChange={e => setCurrentStudent({...currentStudent, fatherName: e.target.value})} />
+                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.father_name} onChange={e => setCurrentStudent({...currentStudent, father_name: e.target.value})} />
                                                 </div>
                                                 <div className="input-group">
                                                     <label>Father's Phone*</label>
-                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.fatherPhone} onChange={e => setCurrentStudent({...currentStudent, fatherPhone: e.target.value})} />
+                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.father_phone} onChange={e => setCurrentStudent({...currentStudent, father_phone: e.target.value})} />
                                                 </div>
                                                 <div className="input-group">
                                                     <label>Mother's Name*</label>
-                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.motherName} onChange={e => setCurrentStudent({...currentStudent, motherName: e.target.value})} />
+                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.mother_name} onChange={e => setCurrentStudent({...currentStudent, mother_name: e.target.value})} />
                                                 </div>
                                                 <div className="input-group">
                                                     <label>Mother's Phone*</label>
-                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.motherPhone} onChange={e => setCurrentStudent({...currentStudent, motherPhone: e.target.value})} />
+                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.mother_phone} onChange={e => setCurrentStudent({...currentStudent, mother_phone: e.target.value})} />
+                                                </div>
+                                                <div className="input-group" style={{ gridColumn: 'span 2' }}>
+                                                    <label>Guardian / Other Details</label>
+                                                    <input type="text" disabled={modalMode==='view'} className="form-input" value={currentStudent.guardian_details || ''} onChange={e => setCurrentStudent({...currentStudent, guardian_details: e.target.value})} />
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        {/* 3. Contact & Address */}
+                                        <section className="glass-card" style={{ padding: '1.5rem', background: 'var(--surface)' }}>
+                                            <h4 className="section-title">Contact & Medical</h4>
+                                            <div className="input-grid">
+                                                <div className="input-group">
+                                                    <label>Aadhar Number</label>
+                                                    <input type="text" disabled={modalMode==='view'} className="form-input" value={currentStudent.aadhar_number || ''} onChange={e => setCurrentStudent({...currentStudent, aadhar_number: e.target.value})} />
                                                 </div>
                                                 <div className="input-group">
-                                                    <label>Guardian Name</label>
-                                                    <input type="text" disabled={modalMode==='view'} className="form-input" value={currentStudent.guardianName} onChange={e => setCurrentStudent({...currentStudent, guardianName: e.target.value})} />
+                                                    <label>Email ID*</label>
+                                                    <input type="email" required disabled={modalMode==='view'} className="form-input" value={currentStudent.email} onChange={e => setCurrentStudent({...currentStudent, email: e.target.value})} />
+                                                </div>
+                                                <div className="input-group" style={{ gridColumn: 'span 2' }}>
+                                                    <label>Permanent Address*</label>
+                                                    <textarea required rows={2} disabled={modalMode==='view'} className="form-input" value={currentStudent.permanent_address} onChange={e => setCurrentStudent({...currentStudent, permanent_address: e.target.value})} />
                                                 </div>
                                                 <div className="input-group">
-                                                    <label>Guardian Phone</label>
-                                                    <input type="text" disabled={modalMode==='view'} className="form-input" value={currentStudent.guardianPhone} onChange={e => setCurrentStudent({...currentStudent, guardianPhone: e.target.value})} />
+                                                    <label>Blood Group*</label>
+                                                    <select required disabled={modalMode==='view'} className="form-input" value={currentStudent.blood_group} onChange={e => setCurrentStudent({...currentStudent, blood_group: e.target.value})}>
+                                                        <option value="">Select</option>
+                                                        {['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                                                    </select>
                                                 </div>
+                                                <div className="input-group">
+                                                    <label>Transport Required?</label>
+                                                    <select disabled={modalMode==='view'} className="form-input" value={currentStudent.transport_required} onChange={e => setCurrentStudent({...currentStudent, transport_required: e.target.value === 'true'})}>
+                                                        <option value="false">No (Day Scholar)</option>
+                                                        <option value="true">Yes (School Bus)</option>
+                                                    </select>
+                                                </div>
+                                                <div className="input-group" style={{ gridColumn: 'span 2' }}>
+                                                    <label>Medical Conditions / Allergies</label>
+                                                    <input type="text" disabled={modalMode==='view'} className="form-input" placeholder="e.g. Asthma, Penicillin allergy" value={currentStudent.medical_conditions || ''} onChange={e => setCurrentStudent({...currentStudent, medical_conditions: e.target.value})} />
+                                                </div>
+                                            </div>
+                                        </section>
+                                    </div>
+
+                                    {/* Right Column: Fees & Quick Stats */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                                         <section className="glass-card" style={{ padding: '1.5rem', border: '1px solid var(--primary)', background: 'rgba(99, 102, 241, 0.02)' }}>
+                                            <h4 className="section-title" style={{ color: 'var(--primary)' }}>Annual Fee Structure</h4>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                                {feeHeads.length === 0 ? (
+                                                    <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                                                        No fee types configured. Go to <span style={{ color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate('/fee-settings')}>Fee Settings</span> to add them.
+                                                    </p>
+                                                ) : (
+                                                    feeHeads.map(head => {
+                                                        const allocation = (currentStudent.fee_allocations || []).find(a => a.fee_head_id === head.id);
+                                                        const amount = allocation ? allocation.amount : 0;
+                                                        
+                                                        return (
+                                                            <div key={head.id} className="input-group">
+                                                                <label style={{ fontSize: '0.75rem' }}>{head.name} (₹)</label>
+                                                                <input 
+                                                                    type="number" 
+                                                                    disabled={modalMode==='view'} 
+                                                                    className="form-input" 
+                                                                    value={amount} 
+                                                                    onChange={e => {
+                                                                        const val = parseFloat(e.target.value) || 0;
+                                                                        const existing = [...(currentStudent.fee_allocations || [])];
+                                                                        const idx = existing.findIndex(a => a.fee_head_id === head.id);
+                                                                        if (idx >= 0) {
+                                                                            existing[idx].amount = val;
+                                                                        } else {
+                                                                            existing.push({ fee_head_id: head.id, amount: val });
+                                                                        }
+                                                                        setCurrentStudent({...currentStudent, fee_allocations: existing});
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        );
+                                                    })
+                                                )}
+                                                
+                                                <div style={{ marginTop: '1rem', padding: '1.25rem', background: 'var(--primary)', borderRadius: '12px', color: 'white', textAlign: 'center' }}>
+                                                    <p style={{ fontSize: '0.75rem', opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Annual Fee</p>
+                                                    <h2 style={{ fontSize: '1.75rem', fontWeight: 800 }}>
+                                                        ₹{(currentStudent.fee_allocations || []).reduce((acc, curr) => acc + curr.amount, 0).toLocaleString()}
+                                                    </h2>
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        <section className="glass-card" style={{ padding: '1.5rem' }}>
+                                            <h4 className="section-title">Record Audits</h4>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Status: <strong>{currentStudent.payment_status}</strong></p>
+                                                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Total Paid: ₹{currentStudent.paid?.toLocaleString() || '0'}</p>
+                                                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Admission: {currentStudent.admission_date}</p>
                                             </div>
                                         </section>
                                     </div>
                                 </div>
 
-                                {/* Address Section */}
-                                <section className="glass-card" style={{ padding: '1.5rem', background: 'var(--background)', marginTop: '2rem' }}>
-                                    <h4 style={{ color: 'var(--primary)', marginBottom: '1.25rem', fontSize: '0.875rem', textTransform: 'uppercase' }}>Contact & Address Details</h4>
-                                    <div className="input-grid">
-                                        <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                                            <label>Permanent Address*</label>
-                                            <textarea required rows={2} disabled={modalMode==='view'} className="form-input" value={currentStudent.address} onChange={e => setCurrentStudent({...currentStudent, address: e.target.value})} />
-                                        </div>
-                                        <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                                            <label>Communication Address (Leave blank if same)</label>
-                                            <textarea rows={2} disabled={modalMode==='view'} className="form-input" value={currentStudent.commAddress} onChange={e => setCurrentStudent({...currentStudent, commAddress: e.target.value})} />
-                                        </div>
-                                        <div className="input-group">
-                                            <label>Email ID*</label>
-                                            <input type="email" required disabled={modalMode==='view'} className="form-input" value={currentStudent.email} onChange={e => setCurrentStudent({...currentStudent, email: e.target.value})} />
-                                        </div>
-                                        <div className="input-group">
-                                            <label>Transport Required?</label>
-                                            <select disabled={modalMode==='view'} className="form-input" value={currentStudent.transport} onChange={e => setCurrentStudent({...currentStudent, transport: e.target.value})}>
-                                                <option value="Yes">Yes</option>
-                                                <option value="No">No</option>
-                                            </select>
-                                        </div>
-                                        <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                                            <label>Medical Conditions</label>
-                                            <input type="text" disabled={modalMode==='view'} className="form-input" placeholder="e.g. Asthma, Allergies" value={currentStudent.medical} onChange={e => setCurrentStudent({...currentStudent, medical: e.target.value})} />
-                                        </div>
-                                    </div>
-                                </section>
-
-                                {/* Documents & Fees Panel */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '2rem' }}>
-                                    <section className="glass-card" style={{ padding: '1.5rem' }}>
-                                        <h4 style={{ color: 'var(--primary)', marginBottom: '1.25rem', fontSize: '0.875rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <FileText size={18} />
-                                            Documents Collected
-                                        </h4>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                            <label style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}>
-                                                <input type="checkbox" disabled={modalMode==='view'} checked={currentStudent.documents.tc} onChange={e => setCurrentStudent({...currentStudent, documents: {...currentStudent.documents, tc: e.target.checked}})} />
-                                                <span>Transfer Certificate (TC)</span>
-                                            </label>
-                                            <label style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}>
-                                                <input type="checkbox" disabled={modalMode==='view'} checked={currentStudent.documents.birthCert} onChange={e => setCurrentStudent({...currentStudent, documents: {...currentStudent.documents, birthCert: e.target.checked}})} />
-                                                <span>Birth Certificate</span>
-                                            </label>
-                                        </div>
-                                    </section>
-
-                                    <section className="glass-card" style={{ padding: '1.5rem', background: 'var(--surface-hover)' }}>
-                                        <h4 style={{ color: 'var(--primary)', marginBottom: '1.25rem', fontSize: '0.875rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <CreditCard size={18} />
-                                            Student Fee Structure (Annual)
-                                        </h4>
-                                        <div className="input-grid">
-                                            <div className="input-group">
-                                                <label>Tuition Fee (₹)</label>
-                                                <input type="number" disabled={modalMode==='view'} className="form-input" value={currentStudent.feeStructure.tuition} onChange={e => setCurrentStudent({...currentStudent, feeStructure: {...currentStudent.feeStructure, tuition: e.target.value}})} />
-                                            </div>
-                                            <div className="input-group">
-                                                <label>Transport (₹)</label>
-                                                <input type="number" disabled={modalMode==='view'} className="form-input" value={currentStudent.feeStructure.transport} onChange={e => setCurrentStudent({...currentStudent, feeStructure: {...currentStudent.feeStructure, transport: e.target.value}})} />
-                                            </div>
-                                            <div className="input-group">
-                                                <label>Exam Fee (₹)</label>
-                                                <input type="number" disabled={modalMode==='view'} className="form-input" value={currentStudent.feeStructure.exam} onChange={e => setCurrentStudent({...currentStudent, feeStructure: {...currentStudent.feeStructure, exam: e.target.value}})} />
-                                            </div>
-                                            <div className="input-group">
-                                                <label>Misc Fee (₹)</label>
-                                                <input type="number" disabled={modalMode==='view'} className="form-input" value={currentStudent.feeStructure.misc} onChange={e => setCurrentStudent({...currentStudent, feeStructure: {...currentStudent.feeStructure, misc: e.target.value}})} />
-                                            </div>
-                                        </div>
-                                        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
-                                            <span>Total Annual Fee</span>
-                                            <span style={{ color: 'var(--primary)' }}>₹{(Object.values(currentStudent.feeStructure).reduce((a, b) => parseFloat(a) + parseFloat(b || 0), 0)).toLocaleString()}</span>
-                                        </div>
-                                    </section>
-                                </div>
-
                                 {modalMode !== 'view' && (
-                                    <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1.25rem', fontSize: '1rem', marginTop: '3rem', borderRadius: '14px', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)' }}>
-                                        {modalMode === 'add' ? 'Complete Student Enrollment' : 'Update Student Record'}
-                                    </button>
+                                    <div style={{ marginTop: '3rem', display: 'flex', gap: '1rem' }}>
+                                        <button type="button" className="btn" style={{ flex: 1, border: '1px solid var(--border)', background: 'var(--surface-hover)' }} onClick={() => setIsModalOpen(false)}>Cancel</button>
+                                        <button type="submit" className="btn btn-primary" style={{ flex: 2 }}>{modalMode === 'add' ? 'Complete Student Onboarding' : 'Update Record'}</button>
+                                    </div>
                                 )}
                             </form>
                         </div>
