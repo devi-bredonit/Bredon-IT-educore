@@ -1,0 +1,15 @@
+{
+  "name": "educore-plus",
+  "version": "1.0.0",
+  "description": "Premium School Management System",
+  "scripts": {
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && echo 'Please ensure python and requirements are installed manually if scripts fail'",
+    "setup:backend": "cd backend && python -m venv venv && .\\venv\\Scripts\\activate && pip install -r requirements.txt",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && .\\venv\\Scripts\\python.exe -m app.main",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

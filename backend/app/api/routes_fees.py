@@ -1,54 +1,93 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 from pydantic import BaseModel
-from datetime import date
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from app.database import get_db
 from app import models
+from datetime import date as date_type
 
 router = APIRouter(prefix="/fees", tags=["Fees"])
 
-class Payment(BaseModel):
-    id: Optional[int] = None
+class PaymentBase(BaseModel):
     student_id: int
     student_name: str
-    fee_type: str # Tuition, Transport, Exam, Misc
+    fee_type: str
     amount_paid: float
-    discount_type: Optional[str] = None # General, Sibling, Teacher, Others
-    payment_mode: str # Cash, UPI, Bank Transfer
+    discount_type: str
+    payment_mode: str
     remarks: Optional[str] = None
-    payment_date: date
+    payment_date: Optional[date_type] = None
+    transaction_id: Optional[str] = None
+
+class PaymentCreate(PaymentBase):
+    pass
+
+class Payment(PaymentBase):
+    id: int
+    school_id: Optional[int] = None
 
     class Config:
         from_attributes = True
 
-@router.get("/payments", response_model=List[Payment])
-def get_payments(db: Session = Depends(get_db)):
-    return db.query(models.Payment).all()
+@router.get("/dashboard-summary")
+def get_dashboard_summary(school_id: int, standard: str = "All", section: str = "All", db: Session = Depends(get_db)):
+    query = db.query(models.Student).filter(models.Student.school_id == school_id)
+    if standard != "All":
+        query = query.filter(models.Student.current_class == standard)
+    if section != "All":
+        query = query.filter(models.Student.section == section)
+    
+    students = query.all()
+    total_received = sum(s.paid for s in students)
+    total_expected = sum(s.total for s in students)
+    pending = total_expected - total_received
+    
+    return {
+        "totalPaymentReceived": total_received,
+        "pendingPaymentToBeReceived": pending,
+        "totalStudentCount": len(students)
+    }
 
 @router.post("/record-payment", response_model=Payment)
-def record_payment(payment: Payment, db: Session = Depends(get_db)):
-    db_payment = models.Payment(**payment.model_dump())
+def record_payment(payment: PaymentCreate, db: Session = Depends(get_db)):
+    # Find student
+    student = db.query(models.Student).filter(models.Student.id == payment.student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Update student paid amount
+    student.paid += payment.amount_paid
+    if student.paid >= student.total:
+        student.payment_status = "Paid"
+    elif student.paid > 0:
+        student.payment_status = "Partial"
+    
+    # Create payment record
+    db_payment = models.Payment(
+        **payment.model_dump(),
+        school_id=student.school_id
+    )
     db.add(db_payment)
+    
+    # Capture Audit
+    audit = models.AuditLog(
+        school_id=student.school_id,
+        student_id=student.id,
+        action="Record Payment",
+        details=f"Payment of ₹{payment.amount_paid} recorded for {student.name}. Mode: {payment.payment_mode}",
+        timestamp=date_type.today()
+    )
+    db.add(audit)
+    
     db.commit()
     db.refresh(db_payment)
     return db_payment
 
-@router.get("/dashboard-summary")
-def get_dashboard_summary(db: Session = Depends(get_db)):
-    total_received = db.query(func.sum(models.Payment.amount_paid)).scalar() or 0.0
+@router.get("/audits", response_model=List[dict])
+def get_audits(school_id: int, student_id: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(models.AuditLog).filter(models.AuditLog.school_id == school_id)
+    if student_id:
+        query = query.filter(models.AuditLog.student_id == student_id)
     
-    # Calculate pending (this would ideally be based on student.total - student.paid)
-    # For now, we'll keep the mock logic for pending but use database for student count
-    total_student_count = db.query(models.Student).count()
-    
-    # Mocked pending calculation based on student fee details
-    total_fees = db.query(func.sum(models.Student.tuition + models.Student.transport + models.Student.exam + models.Student.misc)).scalar() or 0.0
-    pending_to_be_received = total_fees - total_received
-    
-    return {
-        "totalPaymentReceived": total_received,
-        "pendingPaymentToBeReceived": max(0, pending_to_be_received),
-        "totalStudentCount": total_student_count
-    }
+    audits = query.order_by(models.AuditLog.timestamp.desc()).all()
+    return [{"id": a.id, "action": a.action, "details": a.details, "timestamp": a.timestamp.isoformat()} for a in audits]

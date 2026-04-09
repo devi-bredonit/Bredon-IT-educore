@@ -19,11 +19,12 @@ const SidebarLayout = ({ user, onLogout }) => {
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['Super Admin', 'Corporate User'] },
+    { name: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['Super Admin', 'Corporate User', 'Administrator'] },
     { name: 'Students', path: '/students', icon: Users, roles: ['Super Admin', 'Corporate User', 'Administrator'] },
     { name: 'Fees & Payments', path: '/fees', icon: CreditCard, roles: ['Super Admin', 'Corporate User', 'Administrator'] },
     { name: 'Schools', path: '/schools', icon: School, roles: ['Super Admin'] },
-    { name: 'User Management', path: '/users', icon: UserCog, roles: ['Super Admin', 'Corporate User'] },
+    { name: 'User Management', path: '/users', icon: UserCog, roles: ['Super Admin'] },
+    { name: 'Fee Settings', path: '/fee-settings', icon: Settings, roles: ['Super Admin', 'Corporate User', 'Administrator'] },
   ];
 
   const allowedNav = navItems.filter(item => item.roles.includes(user.role));
