@@ -1,127 +1,127 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Search, Shield, ToggleLeft, ToggleRight, MoreVertical, Edit3, Trash2, X, School, Mail, Phone, Lock } from 'lucide-react';
+import { UserPlus, Search, Shield, ToggleLeft, ToggleRight, Edit3, Trash2, X } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API = 'http://localhost:8000';
+
+const emptyUser = {
+    username: '', password: '', profile_name: '', role: 'Administrator',
+    phone: '', email: '', school_id: '', permissions: '', is_active: true
+};
 
 const UserManagement = () => {
     const [users, setUsers] = useState([]);
     const [schools, setSchools] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [roles, setRoles] = useState(['Super Admin']);
     const [searchTerm, setSearchTerm] = useState('');
+    const [roleFilter, setRoleFilter] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('add');
-    const [roleFilter, setRoleFilter] = useState('All');
-    
-    // Get logged in user context
-    const loggedInUser = JSON.parse(localStorage.getItem('user')) || {};
-    const isSuperAdmin = loggedInUser.role === 'Super Admin';
-
-    const [currentUser, setCurrentUser] = useState({
-        username: '', password: '', profile_name: '', role: 'Admin User', 
-        school_id: loggedInUser.school_id || '', phone: '', email: '', is_active: true
-    });
+    const [currentUser, setCurrentUser] = useState(emptyUser);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        fetchData();
+        fetchUsers();
+        fetchSchools();
+        
+        // Load custom roles created in Role Management
+        const storedRoles = localStorage.getItem('customRoles');
+        if (storedRoles) {
+            const parsed = JSON.parse(storedRoles);
+            const customNames = parsed.map(r => r.name);
+            const uniqueRoles = Array.from(new Set(['Super Admin', ...customNames]));
+            setRoles(uniqueRoles);
+        }
     }, []);
 
-    const fetchData = async () => {
-        setIsLoading(true);
+    const fetchUsers = async () => {
         try {
-            // Fetch users (with school_id filter if not super admin)
-            const userUrl = isSuperAdmin ? `${API_BASE_URL}/users/` : `${API_BASE_URL}/users/?school_id=${loggedInUser.school_id}`;
-            const userResp = await fetch(userUrl);
-            if (userResp.ok) {
-                const userData = await userResp.json();
-                setUsers(userData);
-            } else {
-                throw new Error('User fetch failed');
-            }
-
-            // Fetch schools if super admin (for user assignment)
-            if (isSuperAdmin) {
-                const schoolResp = await fetch(`${API_BASE_URL}/schools/`);
-                if (schoolResp.ok) {
-                    const schoolData = await schoolResp.json();
-                    setSchools(schoolData);
-                }
-            }
-        } catch (error) {
-            console.error('Error fetching data, using mock:', error);
-            // Fallback dummy users for comprehensive demo
-            setUsers([
-                { id: 1, username: 'admin_main', profile_name: 'Deepak Kumar', role: 'Super Admin', email: 'deepak@educore.edu', phone: '9812345678', is_active: true, school_id: null },
-                { id: 2, username: 'school_admin_1', profile_name: 'Anjali Sharma', role: 'Admin User', email: 'anjali@school1.edu', phone: '9812345679', is_active: true, school_id: 1 },
-                { id: 3, username: 'corp_user_1', profile_name: 'Vikram Singh', role: 'Corporate User', email: 'vikram@educore.edu', phone: '9812345680', is_active: true, school_id: null },
-                { id: 4, username: 'school_admin_2', profile_name: 'Priyanka Verma', role: 'Admin User', email: 'priyanka@springfield.ac.in', phone: '9812345681', is_active: true, school_id: 2 }
-            ]);
-            // Fallback dummy schools for mapping
-            setSchools([
-                { id: 1, name: 'EduCore International School' },
-                { id: 2, name: 'Springfield Academy' }
-            ]);
-        } finally {
-            setIsLoading(false);
-        }
+            const res = await fetch(`${API}/users/`);
+            if (res.ok) setUsers(await res.json());
+        } catch (e) { console.error('Failed to fetch users:', e); }
     };
+
+    const fetchSchools = async () => {
+        try {
+            const res = await fetch(`${API}/schools/`);
+            if (res.ok) setSchools(await res.json());
+        } catch (e) { console.error('Failed to fetch schools:', e); }
+    };
+
+    const filtered = users.filter(u => {
+        const matchSearch = u.profile_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.username?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchRole = roleFilter === '' || u.role === roleFilter;
+        return matchSearch && matchRole;
+    });
 
     const handleOpenModal = (mode, user = null) => {
         setModalMode(mode);
-        if (user) {
-            setCurrentUser({ ...user, password: '' }); // Don't prepopulate password on edit
-        } else {
-            setCurrentUser({
-                username: '', password: '', profile_name: '', role: isSuperAdmin ? 'Corporate User' : 'Admin User', 
-                school_id: loggedInUser.school_id || '', phone: '', email: '', is_active: true
-            });
-        }
+        setCurrentUser(user ? {
+            ...user,
+            password: '',
+            school_id: user.school_id || ''
+        } : { ...emptyUser });
         setIsModalOpen(true);
     };
 
     const handleSave = async (e) => {
         e.preventDefault();
+        setLoading(true);
         try {
+            const payload = {
+                ...currentUser,
+                school_id: currentUser.school_id ? parseInt(currentUser.school_id) : null,
+            };
+            // Remove empty password on edit
+            if (modalMode === 'edit' && !payload.password) {
+                delete payload.password;
+            }
+
+            const url = modalMode === 'add' ? `${API}/users/` : `${API}/users/${currentUser.id}`;
             const method = modalMode === 'add' ? 'POST' : 'PUT';
-            const url = modalMode === 'add' ? `${API_BASE_URL}/users/` : `${API_BASE_URL}/users/${currentUser.id}`;
-            
-            const resp = await fetch(url, {
+
+            const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(currentUser)
+                body: JSON.stringify(payload),
             });
 
-            if (resp.ok) {
-                fetchData();
+            if (res.ok) {
+                fetchUsers();
                 setIsModalOpen(false);
             } else {
-                alert('Failed to save user');
+                const err = await res.json();
+                alert(`Error: ${JSON.stringify(err.detail || err)}`);
             }
-        } catch (error) {
-            console.error('Error saving user:', error);
+        } catch (e) {
+            alert('Connection error. Please check the backend is running.');
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleDelete = async (id) => {
-        if (id === loggedInUser.id) {
-            alert("You cannot delete your own account.");
-            return;
-        }
-        if (window.confirm('Are you sure you want to remove this user?')) {
-            try {
-                const resp = await fetch(`${API_BASE_URL}/users/${id}`, { method: 'DELETE' });
-                if (resp.ok) fetchData();
-            } catch (error) {
-                console.error('Error deleting user:', error);
-            }
-        }
+        if (!window.confirm('Are you sure you want to delete this user?')) return;
+        try {
+            const res = await fetch(`${API}/users/${id}`, { method: 'DELETE' });
+            if (res.ok) fetchUsers();
+            else alert('Failed to delete user.');
+        } catch (e) { alert('Connection error.'); }
     };
 
-    const filtered = users.filter(u => {
-        const matchesSearch = u.username.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              u.profile_name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesRole = roleFilter === 'All' || u.role === roleFilter;
-        return matchesSearch && matchesRole;
-    });
+    const handleToggle = async (id) => {
+        try {
+            const res = await fetch(`${API}/users/${id}/toggle`, { method: 'PATCH' });
+            if (res.ok) fetchUsers();
+            else alert('Failed to toggle user status.');
+        } catch (e) { alert('Connection error.'); }
+    };
+
+    const roleColor = (role) => {
+        if (role === 'Super Admin') return 'var(--secondary)';
+        if (role === 'Corporate User') return '#8b5cf6';
+        return 'var(--primary)';
+    };
 
     return (
         <div className="animate-fade-in">
@@ -136,170 +136,211 @@ const UserManagement = () => {
                 </button>
             </header>
 
+            {/* Search & Filter */}
             <div className="glass-card" style={{ padding: '1.25rem', marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <div style={{ flex: 1, position: 'relative' }}>
                     <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={18} />
-                    <input 
-                        type="text" 
-                        placeholder="Search users by name or username..."
+                    <input
+                        type="text"
+                        placeholder="Search users by name or profile..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{
-                            width: '100%',
-                            padding: '0.75rem 1rem 0.75rem 3rem',
-                            borderRadius: '12px',
-                            background: 'var(--surface)',
-                            border: '1px solid var(--border)',
-                            color: 'var(--text)',
-                            outline: 'none'
-                        }}
+                        className="form-input"
+                        style={{ paddingLeft: '3rem' }}
                     />
                 </div>
-                <select 
-                    value={roleFilter} 
-                    onChange={e => setRoleFilter(e.target.value)}
-                    style={{ padding: '0.75rem 1rem', borderRadius: '12px', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                <select
+                    className="form-input"
+                    style={{ width: 'auto' }}
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
                 >
-                    <option value="All">All Roles</option>
-                    <option value="Super Admin">Super Admin</option>
-                    <option value="Corporate User">Corporate User</option>
-                    <option value="Admin User">Admin User</option>
+                    <option value="">All Roles</option>
+                    {roles.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
             </div>
 
-            {isLoading ? (
-                <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading records...</div>
-            ) : (
-                <div className="table-container">
-                    <table>
-                        <thead>
+            {/* Users Table */}
+            <div className="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User Details</th>
+                            <th>Role &amp; Permissions</th>
+                            <th>School Instance</th>
+                            <th>Status</th>
+                            <th style={{ textAlign: 'right' }}>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filtered.length === 0 ? (
                             <tr>
-                                <th>Profile Detail</th>
-                                <th>Role & Account</th>
-                                <th>Access Level</th>
-                                <th>Status</th>
-                                <th style={{ textAlign: 'right' }}>Actions</th>
+                                <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                                    No users found. Click "Onboard User" to add one.
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {filtered.length === 0 ? (
-                                <tr>
-                                    <td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No users found matching your search.</td>
+                        ) : filtered.map((u) => {
+                            const school = schools.find(s => s.id === u.school_id);
+                            return (
+                                <tr key={u.id}>
+                                    <td>
+                                        <p style={{ fontWeight: 600 }}>{u.profile_name}</p>
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>@{u.username}</p>
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: roleColor(u.role) }}>
+                                            <Shield size={16} />
+                                            <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{u.role}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <p style={{ fontSize: '0.875rem' }}>
+                                            {school ? school.name : u.school_id ? `School #${u.school_id}` : 'System Wide'}
+                                        </p>
+                                    </td>
+                                    <td>
+                                        <div
+                                            onClick={() => handleToggle(u.id)}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: u.is_active ? 'var(--success, #10b981)' : '#ef4444', cursor: 'pointer' }}
+                                        >
+                                            {u.is_active ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
+                                            <span style={{ fontSize: '0.875rem' }}>{u.is_active ? 'Active' : 'Disabled'}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                            <button
+                                                title="Edit"
+                                                onClick={() => handleOpenModal('edit', u)}
+                                                style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}
+                                            >
+                                                <Edit3 size={18} />
+                                            </button>
+                                            <button
+                                                title="Delete"
+                                                onClick={() => handleDelete(u.id)}
+                                                style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)', color: '#ef4444', cursor: 'pointer' }}
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
-                            ) : (
-                                filtered.map((u) => (
-                                    <tr key={u.id}>
-                                        <td>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700 }}>
-                                                    {u.profile_name.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <p style={{ fontWeight: 600 }}>{u.profile_name}</p>
-                                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{u.email}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: u.role === 'Super Admin' ? 'var(--secondary)' : 'var(--primary)' }}>
-                                                <Shield size={16} />
-                                                <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{u.role}</span>
-                                            </div>
-                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>ID: @{u.username}</p>
-                                        </td>
-                                        <td>
-                                            {u.school_id ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
-                                                    <School size={14} />
-                                                    <span style={{ fontSize: '0.875rem' }}>
-                                                        {schools.find(s => s.id === u.school_id)?.name || `School ID: ${u.school_id}`}
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary)', borderRadius: '4px', fontWeight: 600 }}>SYSTEM WIDE</span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: u.is_active ? '#10b981' : '#ef4444' }}>
-                                                {u.is_active ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
-                                                <span style={{ fontSize: '0.875rem' }}>{u.is_active ? 'Active' : 'Disabled'}</span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                                <button title="Edit" onClick={() => handleOpenModal('edit', u)} style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                                                    <Edit3 size={18} />
-                                                </button>
-                                                <button title="Delete" onClick={() => handleDelete(u.id)} style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.1)', background: 'transparent', color: '#ef4444', cursor: 'pointer' }}>
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
 
+            {/* Create / Edit Modal */}
             {isModalOpen && (
                 <div className="overlay">
                     <div className="modal-card" style={{ maxWidth: '600px' }}>
                         <div className="modal-header">
                             <div>
-                                <h2 style={{ textTransform: 'capitalize' }}>{modalMode} User</h2>
-                                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Configure credentials and access mapping</p>
+                                <h2>{modalMode === 'add' ? 'Onboard New User' : 'Edit User'}</h2>
+                                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                                    {modalMode === 'add' ? 'Create a new staff account' : 'Update user details and permissions'}
+                                </p>
                             </div>
-                            <button className="close-btn" onClick={() => setIsModalOpen(false)}><X size={20} /></button>
+                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                <button className="btn" style={{ padding: '0.5rem 1rem', background: 'transparent', border: '1px solid var(--border)' }} onClick={() => setIsModalOpen(false)}>Cancel</button>
+                                <button className="close-btn" onClick={() => setIsModalOpen(false)}><X size={20} /></button>
+                            </div>
                         </div>
-                        <div className="modal-content">
+
+                        <div className="modal-content animate-fade-in">
                             <form onSubmit={handleSave}>
                                 <div className="input-grid">
                                     <div className="input-group">
-                                        <label>Full Profile Name*</label>
-                                        <input type="text" required className="form-input" value={currentUser.profile_name} onChange={e => setCurrentUser({...currentUser, profile_name: e.target.value})} />
+                                        <label>Full Name / Profile Name*</label>
+                                        <input
+                                            type="text" required className="form-input"
+                                            value={currentUser.profile_name}
+                                            onChange={e => setCurrentUser({ ...currentUser, profile_name: e.target.value })}
+                                            placeholder="e.g. John Principal"
+                                        />
                                     </div>
                                     <div className="input-group">
-                                        <label>Username (System ID)*</label>
-                                        <input type="text" required className="form-input" placeholder="e.g. jdoe_admin" value={currentUser.username} onChange={e => setCurrentUser({...currentUser, username: e.target.value})} />
+                                        <label>Username*</label>
+                                        <input
+                                            type="text" required className="form-input"
+                                            value={currentUser.username}
+                                            onChange={e => setCurrentUser({ ...currentUser, username: e.target.value })}
+                                            placeholder="e.g. john_principal"
+                                        />
                                     </div>
                                     <div className="input-group">
-                                        <label>Password*</label>
-                                        <div style={{ position: 'relative' }}>
-                                            <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} size={16} />
-                                            <input type="password" required={modalMode === 'add'} className="form-input" style={{ paddingLeft: '2.5rem' }} placeholder={modalMode === 'edit' ? 'Leave blank to keep current' : ''} value={currentUser.password} onChange={e => setCurrentUser({...currentUser, password: e.target.value})} />
-                                        </div>
+                                        <label>{modalMode === 'add' ? 'Password*' : 'New Password (leave blank to keep)'}</label>
+                                        <input
+                                            type="password"
+                                            required={modalMode === 'add'}
+                                            className="form-input"
+                                            value={currentUser.password}
+                                            onChange={e => setCurrentUser({ ...currentUser, password: e.target.value })}
+                                            placeholder={modalMode === 'edit' ? 'Leave blank to keep current' : ''}
+                                        />
                                     </div>
                                     <div className="input-group">
-                                        <label>User Role*</label>
-                                        <select className="form-input" value={currentUser.role} onChange={e => setCurrentUser({...currentUser, role: e.target.value})}>
-                                            {isSuperAdmin && <option value="Super Admin">Super Admin</option>}
-                                            {isSuperAdmin && <option value="Corporate User">Corporate User</option>}
-                                            <option value="Admin User">Admin User</option>
+                                        <label>Role*</label>
+                                        <select required className="form-input" value={currentUser.role} onChange={e => setCurrentUser({ ...currentUser, role: e.target.value })}>
+                                            <option value="" disabled>Select a role</option>
+                                            {roles.map(r => <option key={r} value={r}>{r}</option>)}
                                         </select>
                                     </div>
                                     <div className="input-group">
-                                        <label>Assign to School*</label>
-                                        <select className="form-input" disabled={!isSuperAdmin} value={currentUser.school_id} onChange={e => setCurrentUser({...currentUser, school_id: e.target.value})}>
-                                            {!isSuperAdmin && <option value={loggedInUser.school_id}>{loggedInUser.school_info?.name || 'My School'}</option>}
-                                            {isSuperAdmin && <option value="">Global (No School)</option>}
-                                            {isSuperAdmin && schools.map(s => <option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
-                                        </select>
+                                        <label>Email</label>
+                                        <input
+                                            type="email" className="form-input"
+                                            value={currentUser.email}
+                                            onChange={e => setCurrentUser({ ...currentUser, email: e.target.value })}
+                                            placeholder="user@school.com"
+                                        />
                                     </div>
                                     <div className="input-group">
-                                        <label>Email ID*</label>
-                                        <input type="email" required className="form-input" value={currentUser.email} onChange={e => setCurrentUser({...currentUser, email: e.target.value})} />
+                                        <label>Phone</label>
+                                        <input
+                                            type="text" className="form-input"
+                                            value={currentUser.phone}
+                                            onChange={e => setCurrentUser({ ...currentUser, phone: e.target.value })}
+                                            placeholder="9876543210"
+                                        />
                                     </div>
                                     <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                                        <label>Phone Number</label>
-                                        <input type="text" className="form-input" value={currentUser.phone} onChange={e => setCurrentUser({...currentUser, phone: e.target.value})} />
+                                        <label>Assign School</label>
+                                        <select className="form-input" value={currentUser.school_id} onChange={e => setCurrentUser({ ...currentUser, school_id: e.target.value })}>
+                                            <option value="">System Wide (No specific school)</option>
+                                            {schools.map(s => <option key={s.id} value={s.id}>{s.name} — {s.branch || 'Main'}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="input-group" style={{ gridColumn: 'span 2' }}>
+                                        <label>Permissions (comma-separated)</label>
+                                        <input
+                                            type="text" className="form-input"
+                                            value={currentUser.permissions || ''}
+                                            onChange={e => setCurrentUser({ ...currentUser, permissions: e.target.value })}
+                                            placeholder="e.g. view_students, edit_fees"
+                                        />
+                                    </div>
+                                    <div className="input-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                        <label style={{ margin: 0 }}>Active Status</label>
+                                        <div
+                                            onClick={() => setCurrentUser({ ...currentUser, is_active: !currentUser.is_active })}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: currentUser.is_active ? '#10b981' : '#ef4444' }}
+                                        >
+                                            {currentUser.is_active ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+                                            <span>{currentUser.is_active ? 'Active' : 'Disabled'}</span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem' }}>
-                                    <button type="button" className="btn" style={{ flex: 1, background: 'var(--surface-hover)', border: '1px solid var(--border)' }} onClick={() => setIsModalOpen(false)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save User Profile</button>
+                                <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                                    <button type="button" className="btn" style={{ flex: 1, background: 'var(--surface-hover)', border: '1px solid var(--border)' }} onClick={() => setIsModalOpen(false)}>
+                                        Cancel
+                                    </button>
+                                    <button type="submit" className="btn btn-primary" style={{ flex: 2 }} disabled={loading}>
+                                        {loading ? 'Saving...' : modalMode === 'add' ? 'Create User' : 'Update User'}
+                                    </button>
                                 </div>
                             </form>
                         </div>

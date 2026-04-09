@@ -43,7 +43,11 @@ const SchoolManagement = () => {
     const handleOpenModal = (mode, school = null) => {
         setModalMode(mode);
         if (school) {
-            setCurrentSchool(school);
+            // Map backend snake_case to frontend camelCase
+            setCurrentSchool({
+                ...school,
+                academicYear: school.academic_year || school.academicYear || 'April - March'
+            });
         } else {
             setCurrentSchool({
                 name: '', logo: '', branch: '', code: '', address: '', city: '', state: '', pin: '', 
@@ -168,6 +172,81 @@ const SchoolManagement = () => {
                             </div>
                         ))
                     )}
+                </div>
+            )}
+
+            {/* Features Modal */}
+            {isFeaturesModalOpen && selectedSchool && (
+                <div className="overlay">
+                    <div className="modal-card" style={{ maxWidth: '500px' }}>
+                        <div className="modal-header">
+                            <div>
+                                <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Manage Modules</h2>
+                                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{selectedSchool.name}</p>
+                            </div>
+                            <button className="close-btn" onClick={() => setIsFeaturesModalOpen(false)}><X size={20} /></button>
+                        </div>
+                        <div className="modal-content animate-fade-in">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {Object.entries(schoolFeatures).map(([feature, isEnabled]) => (
+                                    <div key={feature} className="glass-card" style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ textTransform: 'capitalize', fontWeight: 600 }}>{feature} Module</div>
+                                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={isEnabled} 
+                                                onChange={(e) => setSchoolFeatures({...schoolFeatures, [feature]: e.target.checked})} 
+                                                style={{ width: '1.2rem', height: '1.2rem', accentColor: 'var(--primary)' }}
+                                            />
+                                        </label>
+                                    </div>
+                                ))}
+                            </div>
+                            <button onClick={() => setIsFeaturesModalOpen(false)} className="btn btn-primary" style={{ width: '100%', marginTop: '2rem' }}>Save Configuration</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Users Modal */}
+            {isUsersModalOpen && selectedSchool && (
+                <div className="overlay">
+                    <div className="modal-card" style={{ maxWidth: '600px' }}>
+                        <div className="modal-header">
+                            <div>
+                                <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>School Administrators</h2>
+                                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{selectedSchool.name}</p>
+                            </div>
+                            <button className="close-btn" onClick={() => setIsUsersModalOpen(false)}><X size={20} /></button>
+                        </div>
+                        <div className="modal-content animate-fade-in">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                                <input type="text" placeholder="Search users..." className="form-input" style={{ width: '60%' }} />
+                                <button className="btn btn-primary" style={{ padding: '0.5rem 1rem' }} onClick={() => navigate('/users')}><Plus size={16} /> Manage Users Page</button>
+                            </div>
+                            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <th style={{ padding: '0.75rem 0', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.875rem' }}>Name</th>
+                                        <th style={{ padding: '0.75rem 0', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.875rem' }}>Role</th>
+                                        <th style={{ padding: '0.75rem 0', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.875rem' }}>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <td style={{ padding: '1rem 0', fontWeight: 500 }}>Admin Principal</td>
+                                        <td style={{ padding: '1rem 0' }}><span className="badge" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}>Principal</span></td>
+                                        <td style={{ padding: '1rem 0' }}><span className="badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>Active</span></td>
+                                    </tr>
+                                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <td style={{ padding: '1rem 0', fontWeight: 500 }}>IT Support</td>
+                                        <td style={{ padding: '1rem 0' }}><span className="badge" style={{ background: 'var(--surface-hover)', color: 'var(--text-muted)' }}>IT Admin</span></td>
+                                        <td style={{ padding: '1rem 0' }}><span className="badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>Active</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             )}
 

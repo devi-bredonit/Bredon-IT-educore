@@ -27,6 +27,19 @@ app.include_router(routes_students.router)
 app.include_router(routes_fees.router)
 app.include_router(routes_fee_configs.router)
 
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
+
+@app.exception_handler(Exception)
+async def debug_exception_handler(request, exc):
+    import traceback
+    print(f"DEBUG: Global Exception caught: {exc}")
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={"message": "Internal Server Error", "detail": str(exc)},
+    )
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to EduCore+ API"}

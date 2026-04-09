@@ -1,21 +1,91 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Download, UserPlus, Eye, Edit3, Trash2, X, Check, Camera, FileText, CreditCard, IndianRupee, Loader2, Filter } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Search, Download, UserPlus, Eye, Edit3, Trash2, X, Check, Camera, FileText, CreditCard } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:8000';
-
-const StudentDirectory = () => {
-    const navigate = useNavigate();
+const StudentDirectory = ({ user }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [students, setStudents] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [filterClass, setFilterClass] = useState('All');
-    const [filterSection, setFilterSection] = useState('All');
-    const [feeHeads, setFeeHeads] = useState([]);
-    
-    // Auth context
-    const loggedInUser = JSON.parse(localStorage.getItem('user')) || {};
-    const schoolId = loggedInUser.school_id;
+    const [isIdCreated, setIsIdCreated] = useState(false);
+
+    const [schools, setSchools] = useState([]);
+    const [selectedSchoolId, setSelectedSchoolId] = useState(null);
+
+    const hasPermission = (perms) => {
+        if (user?.role === 'Super Admin') return true;
+        const storedRoles = localStorage.getItem('customRoles');
+        if (storedRoles) {
+            const parsedRoles = JSON.parse(storedRoles);
+            const matchedRole = parsedRoles.find(r => r.name === user?.role);
+            if (matchedRole && matchedRole.permissions) {
+                return perms.some(p => matchedRole.permissions.includes(p));
+            }
+        }
+        return false;
+    };
+
+    useEffect(() => {
+        const init = async () => {
+            await fetchSchools();
+            await fetchStudents();
+        };
+        init();
+    }, []);
+
+    useEffect(() => {
+        if (selectedSchoolId) {
+            fetchStudents();
+        }
+    }, [selectedSchoolId]);
+
+    const fetchSchools = async () => {
+        try {
+            const response = await fetch('http://localhost:8000/schools/');
+            if (response.ok) {
+                const data = await response.json();
+                setSchools(data);
+                if (data.length > 0 && !selectedSchoolId) {
+                    setSelectedSchoolId(data[0].id);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to fetch schools:", error);
+        }
+    };
+
+    const fetchStudents = async () => {
+        try {
+            const url = selectedSchoolId 
+                ? `http://localhost:8000/students/?school_id=${selectedSchoolId}`
+                : 'http://localhost:8000/students/';
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                const mappedData = data.map(s => ({
+                    ...s,
+                    admissionNo: s.admission_number,
+                    rollNo: s.roll_number,
+                    class: s.current_class,
+                    joined: s.admission_date,
+                    fatherName: s.father_name,
+                    fatherPhone: s.father_phone,
+                    motherName: s.mother_name,
+                    motherPhone: s.mother_phone,
+                    status: s.payment_status,
+                    bloodGroup: s.blood_group,
+                    address: s.permanent_address,
+                    commAddress: s.communication_address,
+                    aadhar: s.aadhar_number,
+                    transport: s.transport_required ? 'Yes' : 'No',
+                    medical: s.medical_conditions,
+                    prevSchool: s.previous_school,
+                    guardianName: s.guardian_details
+                }));
+                // Filter by school if necessary (handled by backend)
+                setStudents(mappedData);
+            }
+        } catch (error) {
+            console.error("Failed to fetch students:", error);
+        }
+    };
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('add');
@@ -32,52 +102,12 @@ const StudentDirectory = () => {
         fee_allocations: []
     });
 
-    useEffect(() => {
-        if (schoolId) {
-            fetchStudents();
-            fetchFeeHeads();
-        }
-    }, [schoolId, filterClass, filterSection]);
-
-    const fetchFeeHeads = async () => {
-        try {
-            const resp = await fetch(`${API_BASE_URL}/fee-configs/heads?school_id=${schoolId}`);
-            if (resp.ok) {
-                const data = await resp.json();
-                setFeeHeads(data.filter(h => h.is_active));
-            }
-        } catch (error) {
-            console.error('Error fetching fee heads:', error);
-        }
-    };
-
-    const fetchStudents = async () => {
-        setIsLoading(true);
-        try {
-            const url = `${API_BASE_URL}/students/?school_id=${schoolId}&standard=${filterClass}&section=${filterSection}`;
-            const resp = await fetch(url);
-            if (resp.ok) {
-                const data = await resp.json();
-                setStudents(data);
-            } else {
-                throw new Error('Fallback to mock');
-            }
-        } catch (error) {
-            console.error('Error fetching students, using mock:', error);
-            // Fallback dummy students with diverse profiles
-            setStudents([
-                { id: 1, name: 'Rahul Sharma', admission_number: 'ADM001', roll_number: '10', dob: '2010-05-15', gender: 'Male', blood_group: 'A+', current_class: '10', section: 'A', father_name: 'Suresh Sharma', father_phone: '9876543210', email: 'rahul@example.com', payment_status: 'Paid', paid: 25000, tuition: 20000, transport: 2000, exam: 2000, misc: 1000, admission_date: '2023-04-01' },
-                { id: 2, name: 'Sneha Gupta', admission_number: 'ADM002', roll_number: '12', dob: '2012-08-20', gender: 'Female', blood_group: 'B+', current_class: '8', section: 'B', father_name: 'Rajesh Gupta', father_phone: '9876543211', email: 'sneha@example.com', payment_status: 'Partial', paid: 15000, tuition: 18000, transport: 0, exam: 1500, misc: 500, admission_date: '2023-04-05' },
-                { id: 3, name: 'Amit Kumar', admission_number: 'ADM003', roll_number: '05', dob: '2015-02-10', gender: 'Male', blood_group: 'O+', current_class: '5', section: 'C', father_name: 'Vinod Kumar', father_phone: '9876543212', email: 'amit@example.com', payment_status: 'Pending', paid: 0, tuition: 15000, transport: 1500, exam: 1000, misc: 500, admission_date: '2023-04-10' },
-                { id: 4, name: 'Priya Singh', admission_number: 'ADM004', roll_number: '21', dob: '2008-11-25', gender: 'Female', blood_group: 'AB-', current_class: '12', section: 'A', father_name: 'Mahendra Singh', father_phone: '9876543213', email: 'priya@example.com', payment_status: 'Paid', paid: 35000, tuition: 30000, transport: 2500, exam: 2000, misc: 500, admission_date: '2022-04-01' },
-                { id: 5, name: 'Vikram Aditya', admission_number: 'ADM005', roll_number: '03', dob: '2017-06-30', gender: 'Male', blood_group: 'O-', current_class: '3', section: 'D', father_name: 'Aditya Raj', father_phone: '9876543214', email: 'vikram@example.com', payment_status: 'Paid', paid: 12000, tuition: 10000, transport: 1000, exam: 500, misc: 500, admission_date: '2023-06-15' },
-                { id: 6, name: 'Rohan Mehra', admission_number: 'ADM006', roll_number: '15', dob: '2011-03-12', gender: 'Male', blood_group: 'B-', current_class: '9', section: 'A', father_name: 'Sunil Mehra', father_phone: '9876543215', email: 'rohan@example.com', payment_status: 'Partial', paid: 15000, tuition: 22000, transport: 1000, exam: 1500, misc: 500, admission_date: '2023-05-01' },
-                { id: 7, name: 'Ananya Iyer', admission_number: 'ADM007', roll_number: '08', dob: '2013-09-22', gender: 'Female', blood_group: 'A+', current_class: '7', section: 'B', father_name: 'Subramanian Iyer', father_phone: '9876543216', email: 'ananya@example.com', payment_status: 'Paid', paid: 20000, tuition: 18000, transport: 1000, exam: 1000, misc: 0, admission_date: '2023-05-10' }
-            ]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const filtered = students.filter(s => {
+        const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                             (s.admissionNo && s.admissionNo.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesClass = filterClass === '' || (s.class && s.class.toString() === filterClass);
+        return matchesSearch && matchesClass;
+    });
 
     const handleOpenModal = (mode, student = null) => {
         setModalMode(mode);
@@ -104,45 +134,88 @@ const StudentDirectory = () => {
 
     const handleSave = async (e) => {
         e.preventDefault();
+        
+        if (!selectedSchoolId) {
+            alert("Please ensure at least one school exists before adding students.");
+            return;
+        }
+
+        const payload = {
+            school_id: selectedSchoolId,
+            name: currentStudent.name,
+            admission_number: currentStudent.admissionNo,
+            roll_number: currentStudent.rollNo,
+            dob: currentStudent.dob,
+            gender: currentStudent.gender,
+            blood_group: currentStudent.bloodGroup,
+            photo_url: currentStudent.photo,
+            current_class: currentStudent.class,
+            section: currentStudent.section,
+            admission_date: currentStudent.joined,
+            previous_school: currentStudent.prevSchool,
+            father_name: currentStudent.fatherName,
+            father_phone: currentStudent.fatherPhone,
+            mother_name: currentStudent.motherName,
+            mother_phone: currentStudent.motherPhone,
+            guardian_details: currentStudent.guardianName,
+            email: currentStudent.email,
+            permanent_address: currentStudent.address,
+            communication_address: currentStudent.commAddress,
+            aadhar_number: currentStudent.aadhar,
+            transport_required: currentStudent.transport === 'Yes',
+            medical_conditions: currentStudent.medical,
+            documents_url: '', 
+            joining_date: currentStudent.joined,
+            payment_status: currentStudent.status
+        };
+
         try {
-            const method = modalMode === 'add' ? 'POST' : 'PUT';
-            const url = modalMode === 'add' ? `${API_BASE_URL}/students/` : `${API_BASE_URL}/students/${currentStudent.id}`;
-            
-            // Sanitize dates: convert empty strings to null for the backend
-            const sanitizedStudent = { ...currentStudent };
-            ['dob', 'admission_date', 'joining_date'].forEach(field => {
-                if (sanitizedStudent[field] === '') {
-                    sanitizedStudent[field] = null;
+            if (modalMode === 'add') {
+                const response = await fetch('http://localhost:8000/students/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) {
+                    fetchStudents();
+                    setIsModalOpen(false);
+                } else {
+                    const err = await response.json();
+                    alert(`Failed to create student: ${JSON.stringify(err.detail)}`);
                 }
-            });
-
-            const resp = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(sanitizedStudent)
-            });
-
-            if (resp.ok) {
-                fetchStudents();
-                setIsModalOpen(false);
-            } else {
-                const errorData = await resp.json().catch(() => ({}));
-                const serverMsg = errorData.detail || 'Unknown server error';
-                alert(`Failed to save student: ${serverMsg}. Please ensure the database is reachable.`);
+            } else if (modalMode === 'edit') {
+                const response = await fetch(`http://localhost:8000/students/${currentStudent.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) {
+                    fetchStudents();
+                    setIsModalOpen(false);
+                } else {
+                    alert("Failed to update student.");
+                }
             }
         } catch (error) {
-            console.error('Error saving student:', error);
-            alert(`Network error: ${error.message}. Please check if the backend server is running and the database is connected.`);
+            console.error("Error saving student:", error);
+            alert("Connection error.");
         }
     };
 
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this student record?')) {
             try {
-                const resp = await fetch(`${API_BASE_URL}/students/${id}`, { method: 'DELETE' });
-                if (resp.ok) fetchStudents();
+                const response = await fetch(`http://localhost:8000/students/${id}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    fetchStudents();
+                } else {
+                    alert("Failed to delete student.");
+                }
             } catch (error) {
-                console.error('Error deleting student:', error);
+                console.error("Error deleting student:", error);
+                alert("Connection error.");
             }
         }
     };
@@ -178,10 +251,12 @@ const StudentDirectory = () => {
                     <p>Onboard and manage academic student profiles for {loggedInUser.school_info?.name || 'your school'}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
-                        <UserPlus size={20} />
-                        <span>Onboard Student</span>
-                    </button>
+                    {hasPermission(['edit_students']) && (
+                        <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
+                            <UserPlus size={20} />
+                            <span>Add Student</span>
+                        </button>
+                    )}
                     <button className="btn" onClick={handleExportData} style={{ background: 'var(--surface-hover)', border: '1px solid var(--border)' }}>
                         <Download size={20} />
                         <span>Export CSV</span>
@@ -227,22 +302,56 @@ const StudentDirectory = () => {
                 </div>
             </div>
 
-            {isLoading ? (
-                <div style={{ padding: '4rem', textAlign: 'center' }}>
-                    <Loader2 className="animate-spin" size={40} style={{ margin: '0 auto', color: 'var(--primary)' }} />
-                    <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>Retrieving student records...</p>
-                </div>
-            ) : (
-                <div className="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Adm No.</th>
-                                <th>Student Profile</th>
-                                <th>Parent Details</th>
-                                <th>Class & Sec</th>
-                                <th>Payment</th>
-                                <th style={{ textAlign: 'right' }}>Actions</th>
+            <div className="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Adm No.</th>
+                            <th>Student Details</th>
+                            <th>Parent Details</th>
+                            <th>Class/Section</th>
+                            <th>Status</th>
+                            <th style={{ textAlign: 'right' }}>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filtered.map((s) => (
+                            <tr key={s.id}>
+                                <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{s.admissionNo}</td>
+                                <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700 }}>
+                                            {s.name.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p style={{ fontWeight: 600 }}>{s.name}</p>
+                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Roll: {s.rollNo} | {s.gender}</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <p style={{ fontSize: '0.875rem' }}>F: {s.fatherName}</p>
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>P: {s.fatherPhone}</p>
+                                </td>
+                                <td>{s.class}-{s.section}</td>
+                                <td><span className={`badge badge-${s.status?.toLowerCase() || 'pending'}`}>{s.status || 'Pending'}</span></td>
+                                <td>
+                                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                        <button onClick={() => handleOpenModal('view', s)} title="View" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'transparent' }}>
+                                            <Eye size={18} />
+                                        </button>
+                                        {hasPermission(['edit_students']) && (
+                                            <button onClick={() => handleOpenModal('edit', s)} title="Edit" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'transparent' }}>
+                                                <Edit3 size={18} />
+                                            </button>
+                                        )}
+                                        {hasPermission(['delete_students']) && (
+                                            <button onClick={() => handleDelete(s.id)} title="Delete" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
+                                                <Trash2 size={18} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </td>
                             </tr>
                         </thead>
                         <tbody>
