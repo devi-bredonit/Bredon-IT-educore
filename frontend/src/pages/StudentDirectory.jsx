@@ -148,30 +148,30 @@ const StudentDirectory = ({ user }) => {
         const payload = {
             school_id: selectedSchoolId,
             name: currentStudent.name,
-            admission_number: currentStudent.admissionNo,
-            roll_number: currentStudent.rollNo,
+            admission_number: currentStudent.admission_number || currentStudent.admissionNo,
+            roll_number: currentStudent.roll_number || currentStudent.rollNo,
             dob: currentStudent.dob,
             gender: currentStudent.gender,
-            blood_group: currentStudent.bloodGroup,
-            photo_url: currentStudent.photo,
-            current_class: currentStudent.class,
+            blood_group: currentStudent.blood_group || currentStudent.bloodGroup,
+            photo_url: currentStudent.photo_url || currentStudent.photo,
+            current_class: currentStudent.current_class || currentStudent.class,
             section: currentStudent.section,
-            admission_date: currentStudent.joined,
-            previous_school: currentStudent.prevSchool,
-            father_name: currentStudent.fatherName,
-            father_phone: currentStudent.fatherPhone,
-            mother_name: currentStudent.motherName,
-            mother_phone: currentStudent.motherPhone,
-            guardian_details: currentStudent.guardianName,
+            admission_date: currentStudent.joined || currentStudent.admission_date,
+            previous_school: currentStudent.prevSchool || currentStudent.previous_school,
+            father_name: currentStudent.father_name || currentStudent.fatherName,
+            father_phone: currentStudent.father_phone || currentStudent.fatherPhone,
+            mother_name: currentStudent.mother_name || currentStudent.motherName,
+            mother_phone: currentStudent.mother_phone || currentStudent.motherPhone,
+            guardian_details: currentStudent.guardian_details || currentStudent.guardianName,
             email: currentStudent.email,
-            permanent_address: currentStudent.address,
-            communication_address: currentStudent.commAddress,
-            aadhar_number: currentStudent.aadhar,
-            transport_required: currentStudent.transport === 'Yes',
-            medical_conditions: currentStudent.medical,
-            documents_url: '', 
-            joining_date: currentStudent.joined,
-            payment_status: currentStudent.status
+            permanent_address: currentStudent.permanent_address || currentStudent.address,
+            communication_address: currentStudent.commAddress || currentStudent.communication_address,
+            aadhar_number: currentStudent.aadhar_number || currentStudent.aadhar,
+            transport_required: currentStudent.transport_required === true || currentStudent.transport === 'Yes',
+            medical_conditions: currentStudent.medical_conditions || currentStudent.medical,
+            documents_url: currentStudent.documents_url, 
+            joining_date: currentStudent.joined || currentStudent.joining_date || currentStudent.admission_date,
+            payment_status: currentStudent.status || currentStudent.payment_status || 'Pending'
         };
 
         try {
@@ -368,7 +368,7 @@ const StudentDirectory = ({ user }) => {
 
             {isModalOpen && (
                 <div className="overlay">
-                    <div className="modal-card" style={{ maxWidth: '950px' }}>
+                    <div className="modal-card" style={{ maxWidth: '1050px', width: '95%' }}>
                         <div className="modal-header">
                             <div>
                                 <h2 style={{ textTransform: 'capitalize' }}>{modalMode} Student Profile</h2>
@@ -379,15 +379,51 @@ const StudentDirectory = ({ user }) => {
 
                         <div className="modal-content">
                             <form onSubmit={handleSave}>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '2rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                     
-                                    {/* Left Column: Extensive Forms */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                                    {/* Top Row: Identity (Left) & Fees (Right) */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '1.5rem' }}>
                                         
                                         {/* 1. Basic Identity */}
-                                        <section className="glass-card" style={{ padding: '1.5rem', background: 'var(--surface)' }}>
-                                            <h4 className="section-title">Identity & Admission</h4>
-                                            <div className="input-grid">
+                                        <section className="glass-card" style={{ padding: '1rem', background: 'var(--surface)' }}>
+                                            <h4 className="section-title" style={{ marginBottom: '1rem' }}>Identity & Admission</h4>
+                                            
+                                            <div className="input-group" style={{ marginBottom: '1.25rem' }}>
+                                                <label>Student Profile Photo</label>
+                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                                    <div style={{ 
+                                                        width: '72px', 
+                                                        height: '72px', 
+                                                        borderRadius: '16px', 
+                                                        background: 'var(--background)', 
+                                                        border: '2px dashed var(--border)', 
+                                                        display: 'flex', 
+                                                        alignItems: 'center', 
+                                                        justifyContent: 'center',
+                                                        overflow: 'hidden',
+                                                        flexShrink: 0
+                                                    }}>
+                                                        {currentStudent.photo ? (
+                                                            <img src={currentStudent.photo} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        ) : (
+                                                            <Camera size={28} style={{ color: 'var(--text-muted)' }} />
+                                                        )}
+                                                    </div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <input 
+                                                            type="text" 
+                                                            disabled={modalMode==='view'} 
+                                                            className="form-input" 
+                                                            placeholder="Enter student photo URL (e.g. https://...)" 
+                                                            value={currentStudent.photo || ''} 
+                                                            onChange={e => setCurrentStudent({...currentStudent, photo: e.target.value})} 
+                                                        />
+                                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Paste a link to the student's portrait photo</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
                                                 <div className="input-group">
                                                     <label>Full Student Name*</label>
                                                     <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.name} onChange={e => setCurrentStudent({...currentStudent, name: e.target.value})} />
@@ -395,6 +431,14 @@ const StudentDirectory = ({ user }) => {
                                                 <div className="input-group">
                                                     <label>DOB*</label>
                                                     <input type="date" required disabled={modalMode==='view'} className="form-input" value={currentStudent.dob} onChange={e => setCurrentStudent({...currentStudent, dob: e.target.value})} />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Gender*</label>
+                                                    <select required disabled={modalMode==='view'} className="form-input" value={currentStudent.gender} onChange={e => setCurrentStudent({...currentStudent, gender: e.target.value})}>
+                                                        <option value="Male">Male</option>
+                                                        <option value="Female">Female</option>
+                                                        <option value="Other">Other</option>
+                                                    </select>
                                                 </div>
                                                 <div className="input-group">
                                                     <label>Admission No*</label>
@@ -418,79 +462,22 @@ const StudentDirectory = ({ user }) => {
                                                         {['A', 'B', 'C', 'D'].map(sec => <option key={sec} value={sec}>{sec}</option>)}
                                                     </select>
                                                 </div>
-                                            </div>
-                                        </section>
-
-                                        {/* 2. Parent Details */}
-                                        <section className="glass-card" style={{ padding: '1.5rem' }}>
-                                            <h4 className="section-title">Parental Information</h4>
-                                            <div className="input-grid">
                                                 <div className="input-group">
-                                                    <label>Father's Name*</label>
-                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.father_name} onChange={e => setCurrentStudent({...currentStudent, father_name: e.target.value})} />
+                                                    <label>Admission Date*</label>
+                                                    <input type="date" required disabled={modalMode==='view'} className="form-input" value={currentStudent.joined} onChange={e => setCurrentStudent({...currentStudent, joined: e.target.value})} />
                                                 </div>
                                                 <div className="input-group">
-                                                    <label>Father's Phone*</label>
-                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.father_phone} onChange={e => setCurrentStudent({...currentStudent, father_phone: e.target.value})} />
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>Mother's Name*</label>
-                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.mother_name} onChange={e => setCurrentStudent({...currentStudent, mother_name: e.target.value})} />
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>Mother's Phone*</label>
-                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.mother_phone} onChange={e => setCurrentStudent({...currentStudent, mother_phone: e.target.value})} />
-                                                </div>
-                                                <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                                                    <label>Guardian / Other Details</label>
-                                                    <input type="text" disabled={modalMode==='view'} className="form-input" value={currentStudent.guardian_details || ''} onChange={e => setCurrentStudent({...currentStudent, guardian_details: e.target.value})} />
+                                                    <label>Previous School</label>
+                                                    <input type="text" disabled={modalMode==='view'} className="form-input" value={currentStudent.prevSchool || ''} onChange={e => setCurrentStudent({...currentStudent, prevSchool: e.target.value})} />
                                                 </div>
                                             </div>
                                         </section>
-
-                                        {/* 3. Contact & Address */}
-                                        <section className="glass-card" style={{ padding: '1.5rem', background: 'var(--surface)' }}>
-                                            <h4 className="section-title">Contact & Medical</h4>
-                                            <div className="input-grid">
-                                                <div className="input-group">
-                                                    <label>Aadhar Number</label>
-                                                    <input type="text" disabled={modalMode==='view'} className="form-input" value={currentStudent.aadhar_number || ''} onChange={e => setCurrentStudent({...currentStudent, aadhar_number: e.target.value})} />
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>Email ID*</label>
-                                                    <input type="email" required disabled={modalMode==='view'} className="form-input" value={currentStudent.email} onChange={e => setCurrentStudent({...currentStudent, email: e.target.value})} />
-                                                </div>
-                                                <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                                                    <label>Permanent Address*</label>
-                                                    <textarea required rows={2} disabled={modalMode==='view'} className="form-input" value={currentStudent.permanent_address} onChange={e => setCurrentStudent({...currentStudent, permanent_address: e.target.value})} />
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>Blood Group*</label>
-                                                    <select required disabled={modalMode==='view'} className="form-input" value={currentStudent.blood_group} onChange={e => setCurrentStudent({...currentStudent, blood_group: e.target.value})}>
-                                                        <option value="">Select</option>
-                                                        {['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
-                                                    </select>
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>Transport Required?</label>
-                                                    <select disabled={modalMode==='view'} className="form-input" value={currentStudent.transport_required} onChange={e => setCurrentStudent({...currentStudent, transport_required: e.target.value === 'true'})}>
-                                                        <option value="false">No (Day Scholar)</option>
-                                                        <option value="true">Yes (School Bus)</option>
-                                                    </select>
-                                                </div>
-                                                <div className="input-group" style={{ gridColumn: 'span 2' }}>
-                                                    <label>Medical Conditions / Allergies</label>
-                                                    <input type="text" disabled={modalMode==='view'} className="form-input" placeholder="e.g. Asthma, Penicillin allergy" value={currentStudent.medical_conditions || ''} onChange={e => setCurrentStudent({...currentStudent, medical_conditions: e.target.value})} />
-                                                </div>
-                                            </div>
-                                        </section>
-                                    </div>
 
                                     {/* Right Column: Fees & Quick Stats */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                                         <section className="glass-card" style={{ padding: '1.5rem', border: '1px solid var(--primary)', background: 'rgba(99, 102, 241, 0.02)' }}>
-                                            <h4 className="section-title" style={{ color: 'var(--primary)' }}>Annual Fee Structure</h4>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                         <section className="glass-card" style={{ padding: '1rem', border: '1px solid var(--primary)', background: 'rgba(99, 102, 241, 0.02)' }}>
+                                            <h4 className="section-title" style={{ color: 'var(--primary)', marginBottom: '0.75rem' }}>Annual Fee Structure</h4>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                                 {feeHeads.length === 0 ? (
                                                     <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                                                         No fee types configured. Go to <span style={{ color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate('/fee-settings')}>Fee Settings</span> to add them.
@@ -534,8 +521,8 @@ const StudentDirectory = ({ user }) => {
                                             </div>
                                         </section>
 
-                                        <section className="glass-card" style={{ padding: '1.5rem' }}>
-                                            <h4 className="section-title">Record Audits</h4>
+                                        <section className="glass-card" style={{ padding: '1rem' }}>
+                                            <h4 className="section-title" style={{ marginBottom: '0.75rem' }}>Record Audits</h4>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                                 <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Status: <strong>{currentStudent.payment_status}</strong></p>
                                                 <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Total Paid: ₹{currentStudent.paid?.toLocaleString() || '0'}</p>
@@ -543,10 +530,93 @@ const StudentDirectory = ({ user }) => {
                                             </div>
                                         </section>
                                     </div>
+                                    </div>
+
+                                    {/* Bottom Row: Parental + Contact Layout */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1.5rem' }}>
+                                            {/* 2. Parent Details */}
+                                            <section className="glass-card" style={{ padding: '1rem' }}>
+                                                <h4 className="section-title" style={{ marginBottom: '0.75rem' }}>Parental Information</h4>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                                                <div className="input-group">
+                                                    <label>Father's Name*</label>
+                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.father_name} onChange={e => setCurrentStudent({...currentStudent, father_name: e.target.value})} />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Father's Phone*</label>
+                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.father_phone} onChange={e => setCurrentStudent({...currentStudent, father_phone: e.target.value})} />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Mother's Name*</label>
+                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.mother_name} onChange={e => setCurrentStudent({...currentStudent, mother_name: e.target.value})} />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Mother's Phone*</label>
+                                                    <input type="text" required disabled={modalMode==='view'} className="form-input" value={currentStudent.mother_phone} onChange={e => setCurrentStudent({...currentStudent, mother_phone: e.target.value})} />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Guardian / Other Details</label>
+                                                    <input type="text" disabled={modalMode==='view'} className="form-input" value={currentStudent.guardian_details || ''} onChange={e => setCurrentStudent({...currentStudent, guardian_details: e.target.value})} />
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                            {/* 3. Contact & Address */}
+                                            <section className="glass-card" style={{ padding: '1rem', background: 'var(--surface)' }}>
+                                                <h4 className="section-title" style={{ marginBottom: '0.75rem' }}>Contact & Medical</h4>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                                                <div className="input-group">
+                                                    <label>Aadhar Number</label>
+                                                    <input type="text" disabled={modalMode==='view'} className="form-input" value={currentStudent.aadhar_number || ''} onChange={e => setCurrentStudent({...currentStudent, aadhar_number: e.target.value})} />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Email ID*</label>
+                                                    <input type="email" required disabled={modalMode==='view'} className="form-input" value={currentStudent.email} onChange={e => setCurrentStudent({...currentStudent, email: e.target.value})} />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Permanent Address*</label>
+                                                    <textarea required rows={2} disabled={modalMode==='view'} className="form-input" value={currentStudent.permanent_address} onChange={e => setCurrentStudent({...currentStudent, permanent_address: e.target.value})} />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Communication Address</label>
+                                                    <textarea rows={2} disabled={modalMode==='view'} className="form-input" value={currentStudent.commAddress || ''} onChange={e => setCurrentStudent({...currentStudent, commAddress: e.target.value})} placeholder="Leave blank if same as permanent" />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Blood Group*</label>
+                                                    <select required disabled={modalMode==='view'} className="form-input" value={currentStudent.blood_group} onChange={e => setCurrentStudent({...currentStudent, blood_group: e.target.value})}>
+                                                        <option value="">Select</option>
+                                                        {['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Medical Conditions / Allergies</label>
+                                                    <input type="text" disabled={modalMode==='view'} className="form-input" placeholder="e.g. Asthma, Penicillin allergy" value={currentStudent.medical_conditions || ''} onChange={e => setCurrentStudent({...currentStudent, medical_conditions: e.target.value})} />
+                                                </div>
+                                                </div>
+                                            </section>
+                                        </div>
+
+                                        {/* Bottom Row 2: Secondary Info */}
+                                        <section className="glass-card" style={{ padding: '1rem', background: 'var(--surface)' }}>
+                                            <h4 className="section-title" style={{ marginBottom: '0.75rem' }}>Transport & Documents</h4>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                                                <div className="input-group">
+                                                    <label>Transport Required?</label>
+                                                    <select disabled={modalMode==='view'} className="form-input" value={currentStudent.transport_required} onChange={e => setCurrentStudent({...currentStudent, transport_required: e.target.value === 'true'})}>
+                                                        <option value="false">No (Day Scholar)</option>
+                                                        <option value="true">Yes (School Bus)</option>
+                                                    </select>
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Documents (TC, Birth Certificate) - URL</label>
+                                                    <input type="text" disabled={modalMode==='view'} className="form-input" placeholder="e.g. drive link or filename" value={currentStudent.documents_url || ''} onChange={e => setCurrentStudent({...currentStudent, documents_url: e.target.value})} />
+                                                </div>
+                                            </div>
+                                        </section>
                                 </div>
 
                                 {modalMode !== 'view' && (
-                                    <div style={{ marginTop: '3rem', display: 'flex', gap: '1rem' }}>
+                                    <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem' }}>
                                         <button type="button" className="btn" style={{ flex: 1, border: '1px solid var(--border)', background: 'var(--surface-hover)' }} onClick={() => setIsModalOpen(false)}>Cancel</button>
                                         <button type="submit" className="btn btn-primary" style={{ flex: 2 }}>{modalMode === 'add' ? 'Complete Student Onboarding' : 'Update Record'}</button>
                                     </div>
