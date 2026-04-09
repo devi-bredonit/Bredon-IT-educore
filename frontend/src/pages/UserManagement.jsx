@@ -8,7 +8,8 @@ const emptyUser = {
     phone: '', email: '', school_id: '', permissions: '', is_active: true
 };
 
-const UserManagement = () => {
+const UserManagement = ({ user }) => {
+    const isSuperAdmin = user?.role === 'Super Admin';
     const [users, setUsers] = useState([]);
     const [schools, setSchools] = useState([]);
     const [roles, setRoles] = useState(['Super Admin']);

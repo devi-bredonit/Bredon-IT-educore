@@ -17,7 +17,24 @@ const Dashboard = () => {
   });
 
   const loggedInUser = JSON.parse(localStorage.getItem('user')) || {};
-  const schoolId = loggedInUser.school_id;
+  const [schoolId, setSchoolId] = useState(loggedInUser.school_id || null);
+
+  useEffect(() => {
+      const fetchInitial = async () => {
+          if (!schoolId) {
+              try {
+                  const resp = await fetch(`${API_BASE_URL}/schools/`);
+                  if (resp.ok) {
+                      const data = await resp.json();
+                      if (data.length > 0) setSchoolId(data[0].id);
+                  }
+              } catch (e) {
+                  console.error(e);
+              }
+          }
+      };
+      if (!schoolId) fetchInitial();
+  }, [schoolId]);
 
   useEffect(() => {
     if (schoolId) {

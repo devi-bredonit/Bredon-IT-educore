@@ -73,12 +73,9 @@ const App = () => {
           <Route path="users" element={
             hasPermission(['create_user', 'create_corporate']) || user.role === 'Corporate User' ? <UserManagement user={user} /> : <Navigate to="/" replace />
           } />
-          <Route index element={<Dashboard />} />
-          <Route path="students" element={<StudentDirectory />} />
-          <Route path="fees" element={<FeePanel />} />
-          <Route path="schools" element={<SchoolManagement />} />
-          <Route path="users" element={<UserManagement />} />
-          <Route path="fee-settings" element={<FeeSettings />} />
+          <Route path="fee-settings" element={
+            hasPermission(['fee_settings']) || user.role === 'Super Admin' ? <FeeSettings user={user} /> : <Navigate to="/" replace />
+          } />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

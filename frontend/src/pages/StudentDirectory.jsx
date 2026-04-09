@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Download, UserPlus, Eye, Edit3, Trash2, X, Check, Camera, FileText, CreditCard } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Download, UserPlus, Eye, Edit3, Trash2, X, Check, Camera, FileText, CreditCard, Filter } from 'lucide-react';
 
 const StudentDirectory = ({ user }) => {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [students, setStudents] = useState([]);
     const [isIdCreated, setIsIdCreated] = useState(false);
 
     const [schools, setSchools] = useState([]);
     const [selectedSchoolId, setSelectedSchoolId] = useState(null);
+    const [filterClass, setFilterClass] = useState('All');
+    const [filterSection, setFilterSection] = useState('All');
+    const [feeHeads, setFeeHeads] = useState([]);
 
     const hasPermission = (perms) => {
         if (user?.role === 'Super Admin') return true;
@@ -90,7 +95,7 @@ const StudentDirectory = ({ user }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('add');
     const [currentStudent, setCurrentStudent] = useState({
-        school_id: schoolId,
+        school_id: selectedSchoolId,
         name: '', admission_number: '', roll_number: '', dob: '', gender: 'Male', blood_group: '',
         photo_url: '', current_class: '1', section: 'A', admission_date: new Date().toISOString().split('T')[0],
         joining_date: new Date().toISOString().split('T')[0],
@@ -105,7 +110,7 @@ const StudentDirectory = ({ user }) => {
     const filtered = students.filter(s => {
         const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                              (s.admissionNo && s.admissionNo.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesClass = filterClass === '' || (s.class && s.class.toString() === filterClass);
+        const matchesClass = filterClass === 'All' || (s.class && s.class.toString() === filterClass);
         return matchesSearch && matchesClass;
     });
 
@@ -114,11 +119,11 @@ const StudentDirectory = ({ user }) => {
         if (student) {
             setCurrentStudent({
                 ...student,
-                school_id: schoolId // Ensure school_id is preserved
+                school_id: selectedSchoolId // Ensure school_id is preserved
             });
         } else {
             setCurrentStudent({
-                school_id: schoolId,
+                school_id: selectedSchoolId,
                 name: '', admission_number: '', roll_number: '', dob: '', gender: 'Male', blood_group: '',
                 photo_url: '', current_class: '1', section: 'A', admission_date: new Date().toISOString().split('T')[0],
                 joining_date: new Date().toISOString().split('T')[0],
@@ -220,11 +225,6 @@ const StudentDirectory = ({ user }) => {
         }
     };
 
-    const filtered = students.filter(s => {
-        return s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-               s.admission_number.toLowerCase().includes(searchTerm.toLowerCase());
-    });
-
     const handleExportData = () => {
         const headers = ['Adm No', 'Name', 'Class', 'Father Name', 'Phone', 'Email', 'Payment Status'];
         const csvContent = [
@@ -248,7 +248,7 @@ const StudentDirectory = ({ user }) => {
             <header className="page-header">
                 <div className="title-group">
                     <h1>Student Directory</h1>
-                    <p>Onboard and manage academic student profiles for {loggedInUser.school_info?.name || 'your school'}</p>
+                    <p>Onboard and manage academic student profiles for {user?.school_info?.name || 'your school'}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
                     {hasPermission(['edit_students']) && (
@@ -315,102 +315,56 @@ const StudentDirectory = ({ user }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {filtered.map((s) => (
-                            <tr key={s.id}>
-                                <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{s.admissionNo}</td>
-                                <td>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700 }}>
-                                            {s.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <p style={{ fontWeight: 600 }}>{s.name}</p>
-                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Roll: {s.rollNo} | {s.gender}</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <p style={{ fontSize: '0.875rem' }}>F: {s.fatherName}</p>
-                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>P: {s.fatherPhone}</p>
-                                </td>
-                                <td>{s.class}-{s.section}</td>
-                                <td><span className={`badge badge-${s.status?.toLowerCase() || 'pending'}`}>{s.status || 'Pending'}</span></td>
-                                <td>
-                                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                        <button onClick={() => handleOpenModal('view', s)} title="View" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'transparent' }}>
-                                            <Eye size={18} />
-                                        </button>
-                                        {hasPermission(['edit_students']) && (
-                                            <button onClick={() => handleOpenModal('edit', s)} title="Edit" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'transparent' }}>
-                                                <Edit3 size={18} />
-                                            </button>
-                                        )}
-                                        {hasPermission(['delete_students']) && (
-                                            <button onClick={() => handleDelete(s.id)} title="Delete" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
-                                                <Trash2 size={18} />
-                                            </button>
-                                        )}
-                                    </div>
+                        {filtered.length === 0 ? (
+                            <tr>
+                                <td colSpan="6" style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
+                                    No students found in this school directory.
                                 </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {filtered.length === 0 ? (
-                                <tr>
-                                    <td colSpan="6" style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
-                                        No students found in this school directory.
+                        ) : (
+                            filtered.map((s) => (
+                                <tr key={s.id}>
+                                    <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{s.admissionNo}</td>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700 }}>
+                                                {s.name.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <p style={{ fontWeight: 600 }}>{s.name}</p>
+                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Roll: {s.rollNo} | {s.gender}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <p style={{ fontSize: '0.875rem' }}>F: {s.fatherName}</p>
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>P: {s.fatherPhone}</p>
+                                    </td>
+                                    <td>{s.class}-{s.section}</td>
+                                    <td><span className={`badge badge-${s.status?.toLowerCase() || 'pending'}`}>{s.status || 'Pending'}</span></td>
+                                    <td>
+                                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                            <button onClick={() => handleOpenModal('view', s)} title="View" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'transparent' }}>
+                                                <Eye size={18} />
+                                            </button>
+                                            {hasPermission(['edit_students']) && (
+                                                <button onClick={() => handleOpenModal('edit', s)} title="Edit" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'transparent' }}>
+                                                <Edit3 size={18} />
+                                                </button>
+                                            )}
+                                            {hasPermission(['delete_students']) && (
+                                                <button onClick={() => handleDelete(s.id)} title="Delete" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
+                                                <Trash2 size={18} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
-                            ) : (
-                                filtered.map((s) => (
-                                    <tr key={s.id}>
-                                        <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{s.admission_number}</td>
-                                        <td>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700 }}>
-                                                    {s.name.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <p style={{ fontWeight: 600 }}>{s.name}</p>
-                                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Roll: {s.roll_number || 'N/A'} | {s.gender}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <p style={{ fontSize: '0.875rem' }}>F: {s.father_name}</p>
-                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{s.father_phone}</p>
-                                        </td>
-                                        <td>
-                                            <span style={{ fontWeight: 600 }}>{s.current_class}-{s.section}</span>
-                                        </td>
-                                        <td>
-                                            <span className={`badge badge-${s.payment_status?.toLowerCase() || 'pending'}`}>
-                                                {s.payment_status}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                                <button onClick={() => handleOpenModal('view', s)} title="View Profile" className="btn btn-icon">
-                                                    <Eye size={18} />
-                                                </button>
-                                                <button onClick={() => navigate('/fees', { state: { studentId: s.id, studentName: s.name, from: 'directory' } })} title="Collect Fee" className="btn btn-icon" style={{ color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                                                    <IndianRupee size={18} />
-                                                </button>
-                                                <button onClick={() => handleOpenModal('edit', s)} title="Edit Record" className="btn btn-icon">
-                                                    <Edit3 size={18} />
-                                                </button>
-                                                <button onClick={() => handleDelete(s.id)} title="Delete Record" className="btn btn-icon" style={{ color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
 
             {isModalOpen && (
                 <div className="overlay">
