@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from app.api import routes_users, routes_schools, routes_students, routes_fees, routes_fee_configs
+from app.api import routes_users, routes_schools, routes_students, routes_fees, routes_fee_configs, routes_activities, routes_staff, routes_class_fees
 from app import models
 from app.database import engine
 
@@ -26,6 +26,9 @@ app.include_router(routes_schools.router)
 app.include_router(routes_students.router)
 app.include_router(routes_fees.router)
 app.include_router(routes_fee_configs.router)
+app.include_router(routes_activities.router)
+app.include_router(routes_staff.router)
+app.include_router(routes_class_fees.router)
 
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError

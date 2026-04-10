@@ -126,5 +126,51 @@ class StudentFee(Base):
     student = relationship("Student", back_populates="fee_allocations")
     fee_head = relationship("FeeHead")
 
-# Update Student class with relationship
-# Note: I need to add this to the Student class above where it's defined
+class ClassFeeStructure(Base):
+    __tablename__ = "class_fee_structure"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id"))
+    class_name = Column(String(50), nullable=False) # e.g. "1", "2", "LKG"
+    fee_head_id = Column(Integer, ForeignKey("fee_heads.id"))
+    amount = Column(Float, default=0.0)
+    
+    school = relationship("School")
+    fee_head = relationship("FeeHead")
+
+class Staff(Base):
+    __tablename__ = "staff"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id"))
+    name = Column(String(255), nullable=False)
+    role = Column(String(100), nullable=False) # e.g. Teacher, Principal, Assistant
+    skills_details = Column(Text)
+    contact_info = Column(String(255))
+    is_active = Column(Boolean, default=True)
+    photo_url = Column(Text, nullable=True)
+    joining_date = Column(Date, nullable=True)
+
+class ExtracurricularActivity(Base):
+    __tablename__ = "extracurricular_activities"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id"))
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    capacity = Column(Integer, nullable=True)
+    
+    enrollments = relationship("ActivityEnrollment", back_populates="activity")
+
+class ActivityEnrollment(Base):
+    __tablename__ = "activity_enrollments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    activity_id = Column(Integer, ForeignKey("extracurricular_activities.id"))
+    student_id = Column(Integer, ForeignKey("students.id"))
+    enrollment_date = Column(Date)
+    
+    activity = relationship("ExtracurricularActivity", back_populates="enrollments")
+    student = relationship("Student", back_populates="activity_enrollments")
+
+Student.activity_enrollments = relationship("ActivityEnrollment", back_populates="student")

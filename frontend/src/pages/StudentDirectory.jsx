@@ -13,6 +13,8 @@ const StudentDirectory = ({ user }) => {
     const [selectedSchoolId, setSelectedSchoolId] = useState(user?.school_id || null);
     const [filterClass, setFilterClass] = useState('All');
     const [filterSection, setFilterSection] = useState('All');
+    const [feeHeads, setFeeHeads] = useState([]);
+    const [classFeeStructures, setClassFeeStructures] = useState([]);
 
     const hasPermission = (perms) => {
         if (user?.role === 'Super Admin') return true;
@@ -41,9 +43,35 @@ const StudentDirectory = ({ user }) => {
     useEffect(() => {
         if (selectedSchoolId) {
             fetchStudents();
+            fetchFeeHeads();
+            fetchClassFeeStructures();
             if (viewMode === 'audits') fetchAudits();
         }
     }, [selectedSchoolId, viewMode]);
+
+    const fetchFeeHeads = async () => {
+        try {
+            const resp = await fetch(`http://localhost:8000/fee-configs/heads?school_id=${selectedSchoolId}`);
+            if (resp.ok) {
+                const data = await resp.json();
+                setFeeHeads(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch fee heads:", error);
+        }
+    };
+
+    const fetchClassFeeStructures = async () => {
+        try {
+            const resp = await fetch(`http://localhost:8000/class-fees/?school_id=${selectedSchoolId}`);
+            if (resp.ok) {
+                const data = await resp.json();
+                setClassFeeStructures(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch class fee structures:", error);
+        }
+    };
 
     const fetchAudits = async () => {
         try {
@@ -150,7 +178,7 @@ const StudentDirectory = ({ user }) => {
                 guardian_details: '', email: '', permanent_address: '', communication_address: '', 
                 aadhar_number: '', transport_required: false, medical_conditions: '', payment_status: 'Pending',
                 documents_url: '',
-                tuition: 20000, transport: 0, exam: 2000, misc: 1000
+                fee_allocations: []
             });
         }
         setIsModalOpen(true);
@@ -320,41 +348,69 @@ const StudentDirectory = ({ user }) => {
 
             {viewMode === 'directory' ? (
                 <>
-                <div className="glass-card" style={{ padding: '1.25rem', marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <div style={{ flex: 1, position: 'relative' }}>
-                        <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={18} />
-                        <input 
-                            type="text" 
-                            placeholder="Search student by name or admission no..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="form-input"
-                            style={{ paddingLeft: '3rem' }}
-                        />
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface)', padding: '0 1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                            <Filter size={16} style={{ color: 'var(--text-muted)' }} />
-                            <select 
-                                style={{ background: 'transparent', border: 'none', color: 'var(--text)', padding: '0.75rem 0', outline: 'none', fontSize: '0.875rem' }}
-                                value={filterClass}
-                                onChange={(e) => setFilterClass(e.target.value)}
-                            >
-                                <option value="All">All Classes</option>
-                                {[...Array(12)].map((_, i) => (
-                                    <option key={i + 1} value={i + 1}>Class {i + 1}</option>
-                                ))}
-                            </select>
-                            <div style={{ width: '1px', height: '20px', background: 'var(--border)' }}></div>
-                            <select 
-                                style={{ background: 'transparent', border: 'none', color: 'var(--text)', padding: '0.75rem 0', outline: 'none', fontSize: '0.875rem' }}
-                                value={filterSection}
-                                onChange={(e) => setFilterSection(e.target.value)}
-                            >
-                                <option value="All">All Sections</option>
-                                {['A', 'B', 'C', 'D'].map(sec => <option key={sec} value={sec}>Sec {sec}</option>)}
-                            </select>
+                <div className="glass-card" style={{ padding: '0', marginBottom: '2rem', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ padding: '1.25rem', display: 'flex', gap: '1rem', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
+                        <div style={{ flex: 1, position: 'relative' }}>
+                            <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={18} />
+                            <input 
+                                type="text" 
+                                placeholder="Search student by name or admission no..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="form-input"
+                                style={{ paddingLeft: '3rem' }}
+                            />
                         </div>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface)', padding: '0 1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                <Filter size={16} style={{ color: 'var(--text-muted)' }} />
+                                <div style={{ width: '1px', height: '20px', background: 'var(--border)' }}></div>
+                                <select 
+                                    style={{ background: 'transparent', border: 'none', color: 'var(--text)', padding: '0.75rem 0', outline: 'none', fontSize: '0.875rem' }}
+                                    value={filterSection}
+                                    onChange={(e) => setFilterSection(e.target.value)}
+                                >
+                                    <option value="All">All Sections</option>
+                                    {['A', 'B', 'C', 'D'].map(sec => <option key={sec} value={sec}>Sec {sec}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Class-wise Horizontal Tabs */}
+                    <div style={{ display: 'flex', overflowX: 'auto', padding: '0 1rem', gap: '0.5rem', scrollbarWidth: 'none', borderBottom: '1px solid var(--border)' }}>
+                        <button
+                            onClick={() => setFilterClass('All')}
+                            style={{
+                                padding: '1rem 1.5rem',
+                                background: 'transparent',
+                                border: 'none',
+                                borderBottom: filterClass === 'All' ? '2px solid var(--primary)' : '2px solid transparent',
+                                color: filterClass === 'All' ? 'var(--primary)' : 'var(--text-muted)',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap'
+                            }}
+                        >
+                            All Classes
+                        </button>
+                        {[...Array(12)].map((_, i) => (
+                            <button
+                                key={i + 1}
+                                onClick={() => setFilterClass((i + 1).toString())}
+                                style={{
+                                    padding: '1rem 1.5rem',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    borderBottom: filterClass === (i + 1).toString() ? '2px solid var(--primary)' : '2px solid transparent',
+                                    color: filterClass === (i + 1).toString() ? 'var(--primary)' : 'var(--text-muted)',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                Class {i + 1}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
@@ -379,7 +435,13 @@ const StudentDirectory = ({ user }) => {
                             </tr>
                         ) : (
                             filtered.map((s) => (
-                                <tr key={s.id}>
+                                <tr 
+                                    key={s.id}
+                                    onClick={() => handleOpenModal('view', s)}
+                                    style={{ cursor: 'pointer', transition: 'background 0.2s' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-hover)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                >
                                     <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{s.admissionNo}</td>
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -545,7 +607,21 @@ const StudentDirectory = ({ user }) => {
                                                 </div>
                                                 <div className="input-group">
                                                     <label>Class*</label>
-                                                    <select required disabled={modalMode==='view'} className="form-input" value={currentStudent.current_class} onChange={e => setCurrentStudent({...currentStudent, current_class: e.target.value})}>
+                                                    <select required disabled={modalMode==='view'} className="form-input" value={currentStudent.current_class} onChange={e => {
+                                                        const newClass = e.target.value;
+                                                        // Pre-populate fee structures if it's a new student
+                                                        let newAllocations = currentStudent.fee_allocations || [];
+                                                        if (modalMode === 'add') {
+                                                            const classFees = classFeeStructures.filter(c => c.class_name === newClass);
+                                                            if (classFees.length > 0) {
+                                                                newAllocations = classFees.map(cf => ({
+                                                                    fee_head_id: cf.fee_head_id,
+                                                                    amount: cf.amount
+                                                                }));
+                                                            }
+                                                        }
+                                                        setCurrentStudent({...currentStudent, current_class: newClass, fee_allocations: newAllocations});
+                                                    }}>
                                                         {[...Array(12)].map((_, i) => (
                                                             <option key={i + 1} value={i + 1}>Class {i + 1}</option>
                                                         ))}
