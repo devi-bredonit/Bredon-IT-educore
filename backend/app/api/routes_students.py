@@ -46,11 +46,24 @@ class StudentResponse(StudentBase):
         from_attributes = True
 
 @router.get("/", response_model=List[StudentResponse])
-def get_students(school_id: Optional[int] = None, db: Session = Depends(get_db)):
+def get_students(school_id: Optional[int] = None, role: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(StudentModel)
     if school_id:
         query = query.filter(StudentModel.school_id == school_id)
-    return query.all()
+    
+    students = query.all()
+    
+    if role == "Administration User":
+        # Strip sensitive fee data for Administration Users
+        for s in students:
+            s.tuition = 0.0
+            s.transport = 0.0
+            s.exam = 0.0
+            s.misc = 0.0
+            s.total = 0.0
+            s.paid = 0.0
+            
+    return students
 
 @router.post("/", response_model=StudentResponse)
 def create_student(student: StudentCreate, db: Session = Depends(get_db)):

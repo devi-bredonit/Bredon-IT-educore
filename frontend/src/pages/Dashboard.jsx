@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Users, DollarSign, Clock, Filter, ChevronDown, Loader2, Calendar } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, Clock, Filter, ChevronDown, Loader2, Calendar, Building2 } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -17,11 +17,12 @@ const Dashboard = () => {
   });
 
   const loggedInUser = JSON.parse(localStorage.getItem('user')) || {};
-  const [schoolId, setSchoolId] = useState(loggedInUser.school_id || null);
+  const isSuperAdmin = loggedInUser.role === 'Super Admin';
+  const [schoolId, setSchoolId] = useState(isSuperAdmin ? 0 : (loggedInUser.school_id || null));
 
   useEffect(() => {
       const fetchInitial = async () => {
-          if (!schoolId) {
+          if (!isSuperAdmin && !schoolId) {
               try {
                   const resp = await fetch(`${API_BASE_URL}/schools/`);
                   if (resp.ok) {
@@ -33,11 +34,11 @@ const Dashboard = () => {
               }
           }
       };
-      if (!schoolId) fetchInitial();
-  }, [schoolId]);
+      if (!isSuperAdmin && !schoolId) fetchInitial();
+  }, [schoolId, isSuperAdmin]);
 
   useEffect(() => {
-    if (schoolId) {
+    if (schoolId !== null) {
         fetchDashboardData();
         fetchRecentPayments();
     }
@@ -57,9 +58,10 @@ const Dashboard = () => {
       console.error('Error fetching dashboard summary, using mock:', error);
       // Fallback dummy data
       setSummary({
-        totalPaymentReceived: 2845000,
-        pendingPaymentToBeReceived: 1250000,
-        totalStudentCount: 1248
+        totalPaymentReceived: isSuperAdmin ? 8540000 : 2845000,
+        pendingPaymentToBeReceived: isSuperAdmin ? 3250000 : 1250000,
+        totalStudentCount: isSuperAdmin ? 5420 : 1248,
+        totalSchools: 12
       });
     } finally {
       setIsLoading(false);
@@ -92,6 +94,7 @@ const Dashboard = () => {
   const stats = [
     { label: 'Total Payment Received', value: `₹ ${summary.totalPaymentReceived.toLocaleString()}`, icon: TrendingUp, color: '#10b981' },
     { label: 'Pending Payment', value: `₹ ${summary.pendingPaymentToBeReceived.toLocaleString()}`, icon: Clock, color: '#ef4444' },
+    ...(isSuperAdmin ? [{ label: 'Total Schools', value: (summary.totalSchools || '0').toLocaleString(), icon: Building2, color: '#8b5cf6' }] : []),
     { label: 'Total Student Count', value: summary.totalStudentCount.toLocaleString(), icon: Users, color: '#6366f1' },
   ];
 
@@ -99,8 +102,8 @@ const Dashboard = () => {
     <div className="animate-fade-in">
       <header className="page-header">
         <div className="title-group">
-          <h1>Payment Dashboard</h1>
-          <p>Real-time financial visibility for {loggedInUser.school_info?.name || 'your institution'}</p>
+          <h1>{isSuperAdmin ? 'Global Dashboard' : 'Payment Dashboard'}</h1>
+          <p>{isSuperAdmin ? 'Aggregated analytics across all onboarded schools' : `Real-time financial visibility for ${loggedInUser.school_info?.name || 'your institution'}`}</p>
         </div>
         
         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -131,7 +134,7 @@ const Dashboard = () => {
           <div style={{ padding: '5rem', textAlign: 'center' }}><Loader2 className="animate-spin" size={40} style={{ margin: '0 auto', color: 'var(--primary)' }} /></div>
       ) : (
           <>
-            <section className="grid grid-3" style={{ marginBottom: '2.5rem' }}>
+            <section className={`grid ${isSuperAdmin ? 'grid-4' : 'grid-3'}`} style={{ marginBottom: '2.5rem' }}>
                 {stats.map((stat, idx) => (
                 <div key={idx} className="glass-card" style={{ padding: '2rem', borderTop: `4px solid ${stat.color}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -140,7 +143,7 @@ const Dashboard = () => {
                         <stat.icon size={24} />
                     </div>
                     </div>
-                    <h2 style={{ fontSize: '2.25rem', fontWeight: 800, color: 'var(--text)' }}>{stat.value}</h2>
+                    <h2 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text)' }}>{stat.value}</h2>
                     <p style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '1rem', fontSize: '0.875rem' }}>
                     <span style={{ color: '#10b981', fontWeight: 700 }}>LIVE</span>
                     <span style={{ color: 'var(--text-muted)', marginLeft: '0.25rem' }}>sync active</span>

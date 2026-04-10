@@ -73,17 +73,17 @@ const RegisterSchool = () => {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh',
                 background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)'
             }}>
-                <div className="glass-card" style={{ maxWidth: '500px', padding: '4rem', textAlign: 'center', color: 'white' }}>
-                    <div style={{ width: '80px', height: '80px', background: 'rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem' }}>
+                <div className="glass-card" style={{ maxWidth: '500px', padding: '4rem', textAlign: 'center', color: 'var(--text)' }}>
+                    <div style={{ width: '80px', height: '80px', background: 'var(--success)', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem' }}>
                         <CheckCircle2 size={48} />
                     </div>
                     <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '1rem' }}>Registration Successful!</h1>
-                    <p style={{ opacity: 0.9, lineHeight: 1.6, marginBottom: '2.5rem' }}>
-                        Your school <strong>{formData.school.name}</strong> has been registered. 
+                    <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '2.5rem' }}>
+                        Your school <strong style={{ color: 'var(--text)' }}>{formData.school.name}</strong> has been registered. 
                         You can now log in using your administrator credentials.
                     </p>
-                    <p style={{ fontSize: '0.875rem' }}>Redirecting to login in 5 seconds...</p>
-                    <Link to="/login" style={{ display: 'block', marginTop: '2rem', color: 'white', fontWeight: 700, textDecoration: 'underline' }}>Go to Login Now</Link>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Redirecting to login in 5 seconds...</p>
+                    <Link to="/login" style={{ display: 'block', marginTop: '2rem', color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>Go to Login Now</Link>
                 </div>
             </div>
         );
@@ -94,12 +94,12 @@ const RegisterSchool = () => {
             display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh',
             background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', padding: '2rem'
         }}>
-            <div className="glass-card" style={{ width: '100%', maxWidth: '900px', padding: '3.5rem', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div className="glass-card" style={{ width: '100%', maxWidth: '900px', padding: '3.5rem', backdropFilter: 'blur(20px)', border: '1px solid var(--border)' }}>
                 <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-                    <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.5rem', color: 'white' }}>
+                    <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.5rem', background: 'linear-gradient(to right, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         Join EduCore<sup>+</sup>
                     </h1>
-                    <p style={{ color: 'rgba(255,255,255,0.7)' }}>Register your institution and start managing with precision</p>
+                    <p style={{ color: 'var(--text-muted)' }}>Register your institution and start managing with precision</p>
                 </div>
 
                 {error && (
@@ -112,8 +112,8 @@ const RegisterSchool = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem' }}>
                         {/* School Details */}
                         <div>
-                            <h3 style={{ color: 'white', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <School size={20} /> School Information
+                            <h3 style={{ color: 'var(--text)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <School size={20} color="var(--primary)" /> School Information
                             </h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                                 <div className="register-input-group">
@@ -149,8 +149,8 @@ const RegisterSchool = () => {
 
                         {/* Admin Details */}
                         <div>
-                            <h3 style={{ color: 'white', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <User size={20} /> Admin Account Settings
+                            <h3 style={{ color: 'var(--text)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <User size={20} color="var(--primary)" /> Admin Account Settings
                             </h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                                 <div className="register-input-group">
@@ -178,10 +178,10 @@ const RegisterSchool = () => {
                     </div>
 
                     <div style={{ marginTop: '3.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Link to="/login" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.target.style.color = 'white'} onMouseOut={e => e.target.style.color = 'rgba(255,255,255,0.6)'}>
+                        <Link to="/login" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.target.style.color = 'var(--primary)'} onMouseOut={e => e.target.style.color = 'var(--text-muted)'}>
                             Already registered? Back to Login
                         </Link>
-                        <button type="submit" disabled={isLoading} className="btn" style={{ background: 'white', color: '#4f46e5', minWidth: '240px', padding: '1rem 2rem' }}>
+                        <button type="submit" disabled={isLoading} className="btn btn-primary" style={{ minWidth: '240px', padding: '1rem 2rem' }}>
                             {isLoading ? <Loader2 className="animate-spin" size={20} /> : (
                                 <>
                                     <span style={{ fontWeight: 700 }}>Initialize School Dashboard</span>
@@ -199,22 +199,22 @@ const RegisterSchool = () => {
                     font-size: 0.75rem;
                     text-transform: uppercase;
                     letter-spacing: 0.05em;
-                    color: rgba(255,255,255,0.5);
+                    color: var(--text-muted);
                     margin-bottom: 0.5rem;
                 }
                 .register-input-group input {
                     width: 100%;
                     padding: 0.75rem 1rem;
                     border-radius: 10px;
-                    background: rgba(255,255,255,0.05);
-                    border: 1px solid rgba(255,255,255,0.1);
-                    color: white;
+                    background: white;
+                    border: 1px solid var(--border);
+                    color: var(--text);
                     outline: none;
                     transition: all 0.2s;
                 }
                 .register-input-group input:focus {
-                    background: rgba(255,255,255,0.1);
-                    border-color: rgba(255,255,255,0.3);
+                    background: white;
+                    border-color: var(--primary);
                 }
             `}</style>
         </div>
