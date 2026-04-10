@@ -13,6 +13,7 @@ class ActivityBase(BaseModel):
     name: str
     description: Optional[str] = None
     capacity: Optional[int] = None
+    cost: Optional[float] = 0.0
 
 class ActivityCreate(ActivityBase):
     pass

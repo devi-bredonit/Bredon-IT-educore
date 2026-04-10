@@ -17,6 +17,7 @@ class StaffBase(BaseModel):
     is_active: bool = True
     photo_url: Optional[str] = None
     joining_date: Optional[date] = None
+    salary: Optional[float] = None
 
 class StaffCreate(StaffBase):
     pass
