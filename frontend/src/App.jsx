@@ -10,6 +10,11 @@ import RoleManagement from './pages/RoleManagement';
 import FeeSettings from './pages/FeeSettings';
 import RegisterSchool from './pages/RegisterSchool';
 import Login from './pages/Login';
+import Landing from './pages/Landing';
+
+// import SchoolDeepDive from './pages/SchoolDeepDive';
+// import ActivityManagement from './pages/ActivityManagement';
+// import StaffDirectory from './pages/StaffDirectory';
 
 import SchoolDeepDive from './pages/SchoolDeepDive';
 import ActivityManagement from './pages/ActivityManagement';
@@ -32,8 +37,10 @@ const App = () => {
     return (
       <BrowserRouter>
         <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login onLogin={handleLogin} />} />
           <Route path="/register" element={<RegisterSchool />} />
-          <Route path="*" element={<Login onLogin={handleLogin} />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     );
@@ -89,6 +96,9 @@ const App = () => {
           <Route path="staff" element={
             hasPermission(['create_user']) || user.role === 'Administrator' ? <StaffDirectory user={user} /> : <Navigate to="/" replace />
           } />
+          <Route path="staff" element={
+            hasPermission(['create_user']) || user.role === 'Administrator' ? <StaffDirectory user={user} /> : <Navigate to="/" replace />
+          } /> */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
