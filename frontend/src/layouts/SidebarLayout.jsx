@@ -8,7 +8,9 @@ import {
   UserCog, 
   LogOut,
   ShieldCheck,
-  Settings
+  Settings,
+  Activity,
+  Contact
 } from 'lucide-react';
 
 const SidebarLayout = ({ user, onLogout }) => {
@@ -47,12 +49,26 @@ const SidebarLayout = ({ user, onLogout }) => {
     { 
       name: 'Fee Settings', path: '/fee-settings', icon: Settings, 
       perms: ['always'] // Set to always or a specific perm if needed, using always to mimic roles: ['Super Admin', 'Corporate User', 'Administrator']
+    },
+    { 
+      name: 'Extracurriculars', path: '/activities', icon: Activity, 
+      perms: ['always'] 
+    },
+    { 
+      name: 'Faculty & Staff', path: '/staff', icon: Contact, 
+      perms: ['always'] 
     }
   ];
 
   const allowedNav = navItems.filter(item => {
     // Super Admin gets everything
     if (user?.role === 'Super Admin') return true;
+
+    // Administrator explicitly gets only school-level operations
+    if (user?.role === 'Administrator') {
+      const adminAllowed = ['/', '/students', '/fees', '/fee-settings', '/activities', '/staff'];
+      return adminAllowed.includes(item.path);
+    }
     
     if (item.perms.includes('always')) return true;
 
@@ -88,7 +104,7 @@ const SidebarLayout = ({ user, onLogout }) => {
           <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{roleLabel[user?.role] || user?.role}</p>
         </div>
 
-        <nav>
+        <nav style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingRight: '0.5rem', margin: '0 -0.5rem 1rem 0' }} className="sidebar-nav">
           {allowedNav.map((item) => (
             <NavLink 
               key={item.path} 
@@ -102,7 +118,7 @@ const SidebarLayout = ({ user, onLogout }) => {
           ))}
         </nav>
 
-        <div style={{ marginTop: 'auto' }}>
+        <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           <button onClick={handleLogoutClick} className="nav-link" style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
             <LogOut size={20} />
             <span>Logout</span>

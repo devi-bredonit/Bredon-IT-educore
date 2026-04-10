@@ -16,6 +16,10 @@ import Landing from './pages/Landing';
 // import ActivityManagement from './pages/ActivityManagement';
 // import StaffDirectory from './pages/StaffDirectory';
 
+import SchoolDeepDive from './pages/SchoolDeepDive';
+import ActivityManagement from './pages/ActivityManagement';
+import StaffDirectory from './pages/StaffDirectory';
+
 const App = () => {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
 
@@ -74,9 +78,9 @@ const App = () => {
           <Route path="schools" element={
             hasPermission(['create_school', 'enable_features']) ? <SchoolManagement user={user} /> : <Navigate to="/" replace />
           } />
-          {/* <Route path="schools/:id" element={
+          <Route path="schools/:id" element={
             hasPermission(['create_school', 'enable_features']) ? <SchoolDeepDive user={user} /> : <Navigate to="/" replace />
-          } /> */}
+          } />
           <Route path="roles" element={
             hasPermission(['create_roles']) || user.role === 'Corporate User' ? <RoleManagement user={user} /> : <Navigate to="/" replace />
           } />
@@ -86,8 +90,11 @@ const App = () => {
           <Route path="fee-settings" element={
             hasPermission(['fee_settings']) || user.role === 'Super Admin' || user.role === 'Administrator' ? <FeeSettings user={user} /> : <Navigate to="/" replace />
           } />
-          {/* <Route path="activities" element={
+          <Route path="activities" element={
             hasPermission(['edit_students']) || user.role === 'Administrator' ? <ActivityManagement user={user} /> : <Navigate to="/" replace />
+          } />
+          <Route path="staff" element={
+            hasPermission(['create_user']) || user.role === 'Administrator' ? <StaffDirectory user={user} /> : <Navigate to="/" replace />
           } />
           <Route path="staff" element={
             hasPermission(['create_user']) || user.role === 'Administrator' ? <StaffDirectory user={user} /> : <Navigate to="/" replace />

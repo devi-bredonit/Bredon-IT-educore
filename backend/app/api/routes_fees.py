@@ -31,7 +31,11 @@ class Payment(PaymentBase):
 
 @router.get("/dashboard-summary")
 def get_dashboard_summary(school_id: int, standard: str = "All", section: str = "All", db: Session = Depends(get_db)):
-    query = db.query(models.Student).filter(models.Student.school_id == school_id)
+    # school_id = 0 means Super Admin view (all schools)
+    query = db.query(models.Student)
+    if school_id > 0:
+        query = query.filter(models.Student.school_id == school_id)
+        
     if standard != "All":
         query = query.filter(models.Student.current_class == standard)
     if section != "All":
@@ -42,10 +46,30 @@ def get_dashboard_summary(school_id: int, standard: str = "All", section: str = 
     total_expected = sum(s.total for s in students)
     pending = total_expected - total_received
     
+    # Class-wise demographics
+    class_dist = {}
+    for s in students:
+        cls = s.current_class or "Unknown"
+        class_dist[cls] = class_dist.get(cls, 0) + 1
+        
+    class_distribution = [{"name": f"Class {k}", "count": v} for k, v in class_dist.items()]
+    # Sort class distribution numerically if possible
+    class_distribution.sort(key=lambda x: int(x["name"].split(" ")[1]) if x["name"].split(" ")[1].isdigit() else 999)
+
+    # Activity enrollments
+    activity_dist = []
+    if school_id > 0:
+        activities = db.query(models.ExtracurricularActivity).filter(models.ExtracurricularActivity.school_id == school_id).all()
+        for act in activities:
+            count = db.query(models.ActivityEnrollment).filter(models.ActivityEnrollment.activity_id == act.id).count()
+            activity_dist.append({"name": act.name, "count": count})
+
     return {
         "totalPaymentReceived": total_received,
         "pendingPaymentToBeReceived": pending,
-        "totalStudentCount": len(students)
+        "totalStudentCount": len(students),
+        "classDistribution": class_distribution,
+        "activityDistribution": activity_dist
     }
 
 @router.post("/record-payment", response_model=Payment)
