@@ -12,6 +12,8 @@ import RegisterSchool from './pages/RegisterSchool';
 import Login from './pages/Login';
 
 import SchoolDeepDive from './pages/SchoolDeepDive';
+import ActivityManagement from './pages/ActivityManagement';
+import StaffDirectory from './pages/StaffDirectory';
 
 const App = () => {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
@@ -79,7 +81,13 @@ const App = () => {
             hasPermission(['create_user', 'create_corporate']) || user.role === 'Corporate User' ? <UserManagement user={user} /> : <Navigate to="/" replace />
           } />
           <Route path="fee-settings" element={
-            hasPermission(['fee_settings']) || user.role === 'Super Admin' ? <FeeSettings user={user} /> : <Navigate to="/" replace />
+            hasPermission(['fee_settings']) || user.role === 'Super Admin' || user.role === 'Administrator' ? <FeeSettings user={user} /> : <Navigate to="/" replace />
+          } />
+          <Route path="activities" element={
+            hasPermission(['edit_students']) || user.role === 'Administrator' ? <ActivityManagement user={user} /> : <Navigate to="/" replace />
+          } />
+          <Route path="staff" element={
+            hasPermission(['create_user']) || user.role === 'Administrator' ? <StaffDirectory user={user} /> : <Navigate to="/" replace />
           } />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

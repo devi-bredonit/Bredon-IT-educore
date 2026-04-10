@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Users, DollarSign, Clock, Filter, ChevronDown, Loader2, Calendar, Building2 } from 'lucide-react';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -7,7 +8,9 @@ const Dashboard = () => {
   const [summary, setSummary] = useState({
     totalPaymentReceived: 0,
     pendingPaymentToBeReceived: 0,
-    totalStudentCount: 0
+    totalStudentCount: 0,
+    classDistribution: [],
+    activityDistribution: []
   });
   const [isLoading, setIsLoading] = useState(true);
   const [recentPayments, setRecentPayments] = useState([]);
@@ -61,7 +64,9 @@ const Dashboard = () => {
         totalPaymentReceived: isSuperAdmin ? 8540000 : 2845000,
         pendingPaymentToBeReceived: isSuperAdmin ? 3250000 : 1250000,
         totalStudentCount: isSuperAdmin ? 5420 : 1248,
-        totalSchools: 12
+        totalSchools: 12,
+        classDistribution: [{ name: "Class 1", count: 40 }, { name: "Class 2", count: 35 }, { name: "Class 3", count: 50 }],
+        activityDistribution: [{ name: "Basketball", count: 25 }, { name: "Chess", count: 15 }]
       });
     } finally {
       setIsLoading(false);
@@ -150,6 +155,82 @@ const Dashboard = () => {
                     </p>
                 </div>
                 ))}
+            </section>
+
+            {/* Analytics Dashboard Charts */}
+            <section className="grid grid-3" style={{ marginBottom: '2.5rem' }}>
+                {/* 1. Revenue Split */}
+                <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+                    <h3 style={{ fontSize: '1.125rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ width: '8px', height: '24px', background: 'var(--primary)', borderRadius: '4px' }}></div>
+                        Revenue Distribution
+                    </h3>
+                    <div style={{ flex: 1, minHeight: '250px' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie 
+                                    data={[
+                                        { name: 'Collected', value: summary.totalPaymentReceived },
+                                        { name: 'Pending', value: summary.pendingPaymentToBeReceived }
+                                    ]} 
+                                    cx="50%" cy="50%" innerRadius={60} outerRadius={80} fill="#8884d8" paddingAngle={5} dataKey="value"
+                                >
+                                    <Cell fill="#10b981" />
+                                    <Cell fill="#ef4444" />
+                                </Pie>
+                                <Tooltip formatter={(value) => `₹${value.toLocaleString()}`} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', fontSize: '0.875rem', fontWeight: 600 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#10b981' }}></div>Collected</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444' }}></div>Pending</div>
+                    </div>
+                </div>
+
+                {/* 2. Class-wise Demographics */}
+                <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+                    <h3 style={{ fontSize: '1.125rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ width: '8px', height: '24px', background: '#ec4899', borderRadius: '4px' }}></div>
+                        Class-wise Registration Count
+                    </h3>
+                    <div style={{ flex: 1, minHeight: '250px' }}>
+                        {summary.classDistribution && summary.classDistribution.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={summary.classDistribution}>
+                                    <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                                    <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px', border: 'none', background: 'var(--surface)', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} />
+                                    <Bar dataKey="count" fill="#ec4899" radius={[4, 4, 0, 0]} barSize={30} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div style={{ padding: '4rem 0', textAlign: 'center', color: 'var(--text-muted)' }}>Not enough data to map class-wise distribution yet.</div>
+                        )}
+                    </div>
+                </div>
+
+                {/* 3. Extracurriculars Enrollment */}
+                <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+                    <h3 style={{ fontSize: '1.125rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ width: '8px', height: '24px', background: '#8b5cf6', borderRadius: '4px' }}></div>
+                        Activity Participation
+                    </h3>
+                    <div style={{ flex: 1, minHeight: '250px' }}>
+                        {summary.activityDistribution && summary.activityDistribution.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={summary.activityDistribution} layout="vertical">
+                                    <XAxis type="number" fontSize={12} tickLine={false} axisLine={false} hide />
+                                    <YAxis dataKey="name" type="category" fontSize={12} tickLine={false} axisLine={false} width={80} />
+                                    <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px', border: 'none', background: 'var(--surface)', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} />
+                                    <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={20} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div style={{ padding: '4rem 0', textAlign: 'center', color: 'var(--text-muted)' }}>No students enrolled in activities.</div>
+                        )}
+                    </div>
+                </div>
             </section>
 
             <section className="glass-card" style={{ padding: '2.5rem' }}>
