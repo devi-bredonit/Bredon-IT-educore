@@ -35,6 +35,8 @@ class StudentBase(BaseModel):
     documents_url: Optional[str] = None 
     joining_date: date 
     payment_status: str = "Pending" 
+    fee_allocations: Optional[List[dict]] = []
+    extracurricular_activities: Optional[List[int]] = [] 
 
 class StudentCreate(StudentBase):
     pass
@@ -51,33 +53,72 @@ def get_students(school_id: Optional[int] = None, role: Optional[str] = None, db
     if school_id:
         query = query.filter(StudentModel.school_id == school_id)
     
-    students = query.all()
+    result = []
     
-    if role == "Administration User":
-        # Strip sensitive fee data for Administration Users
-        for s in students:
-            s.tuition = 0.0
-            s.transport = 0.0
-            s.exam = 0.0
-            s.misc = 0.0
-            s.total = 0.0
-            s.paid = 0.0
+    from app.models import ActivityEnrollment, StudentFee
+    
+    for s in students:
+        s_dict = {
+            c.name: getattr(s, c.name) for c in StudentModel.__table__.columns
+        }
+        
+        if role == "Administration User":
+            # Strip sensitive fee data
+            s_dict["tuition"] = 0.0
+            s_dict["transport"] = 0.0
+            s_dict["exam"] = 0.0
+            s_dict["misc"] = 0.0
+            s_dict["total"] = 0.0
+            s_dict["paid"] = 0.0
+            s_dict["fee_allocations"] = []
+        else:
+            fees = db.query(StudentFee).filter(StudentFee.student_id == s.id).all()
+            s_dict["fee_allocations"] = [{"fee_head_id": f.fee_head_id, "amount": f.amount} for f in fees]
             
-    return students
+        acts = db.query(ActivityEnrollment).filter(ActivityEnrollment.student_id == s.id).all()
+        s_dict["extracurricular_activities"] = [a.activity_id for a in acts]
+        
+        result.append(s_dict)
+            
+    return result
 
 @router.post("/", response_model=StudentResponse)
 def create_student(student: StudentCreate, db: Session = Depends(get_db)):
-    print(f"DEBUG: Received request to create student: {student.name} for school_id: {student.school_id}")
     try:
-        db_student = StudentModel(**student.model_dump())
+        data = student.model_dump()
+        fees = data.pop("fee_allocations", [])
+        activities = data.pop("extracurricular_activities", [])
+        
+        # Calculate total fee
+        total_fee = sum(f.get("amount", 0) for f in fees)
+        data["total"] = total_fee
+        
+        from app.models import ActivityEnrollment, StudentFee
+        
+        db_student = StudentModel(**data)
         db.add(db_student)
         db.commit()
         db.refresh(db_student)
-        print(f"DEBUG: Successfully created student: {db_student.id}")
-        return db_student
+        
+        # Add fees
+        for fee in fees:
+            db_fee = StudentFee(student_id=db_student.id, fee_head_id=fee["fee_head_id"], amount=fee["amount"])
+            db.add(db_fee)
+            
+        # Add activities
+        for act_id in activities:
+            db_act = ActivityEnrollment(student_id=db_student.id, activity_id=act_id, enrollment_date=date.today())
+            db.add(db_act)
+            
+        db.commit()
+        
+        # Build response dict
+        resp = {c.name: getattr(db_student, c.name) for c in StudentModel.__table__.columns}
+        resp["fee_allocations"] = fees
+        resp["extracurricular_activities"] = activities
+        return resp
     except Exception as e:
         db.rollback()
-        print(f"DEBUG: Failed to create student. Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{student_id}", response_model=StudentResponse)
@@ -86,12 +127,35 @@ def update_student(student_id: int, updated_student: StudentCreate, db: Session 
     if not db_student:
         raise HTTPException(status_code=404, detail="Student not found")
     
-    for key, value in updated_student.model_dump().items():
+    data = updated_student.model_dump()
+    fees = data.pop("fee_allocations", [])
+    activities = data.pop("extracurricular_activities", [])
+    
+    total_fee = sum(f.get("amount", 0) for f in fees)
+    data["total"] = total_fee
+    
+    for key, value in data.items():
         setattr(db_student, key, value)
+        
+    from app.models import ActivityEnrollment, StudentFee
+    
+    # Sync fees
+    db.query(StudentFee).filter(StudentFee.student_id == student_id).delete()
+    for fee in fees:
+        db.add(StudentFee(student_id=student_id, fee_head_id=fee["fee_head_id"], amount=fee["amount"]))
+        
+    # Sync activities
+    db.query(ActivityEnrollment).filter(ActivityEnrollment.student_id == student_id).delete()
+    for act_id in activities:
+        db.add(ActivityEnrollment(student_id=student_id, activity_id=act_id, enrollment_date=date.today()))
     
     db.commit()
     db.refresh(db_student)
-    return db_student
+    
+    resp = {c.name: getattr(db_student, c.name) for c in StudentModel.__table__.columns}
+    resp["fee_allocations"] = fees
+    resp["extracurricular_activities"] = activities
+    return resp
 
 @router.delete("/{student_id}")
 def delete_student(student_id: int, db: Session = Depends(get_db)):

@@ -9,7 +9,7 @@ const StaffDirectory = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('add');
     const [currentStaff, setCurrentStaff] = useState({
-        name: '', role: 'Teacher', contact_info: '', skills_details: '', photo_url: '', joining_date: new Date().toISOString().split('T')[0], is_active: true
+        name: '', role: 'Teacher', contact_info: '', skills_details: '', photo_url: '', joining_date: new Date().toISOString().split('T')[0], salary: '', is_active: true
     });
     
     const loggedInUser = JSON.parse(localStorage.getItem('user')) || {};
@@ -41,7 +41,7 @@ const StaffDirectory = () => {
             setCurrentStaff({
                 school_id: schoolId,
                 name: '', role: 'Teacher', contact_info: '', skills_details: '', photo_url: '', 
-                joining_date: new Date().toISOString().split('T')[0], is_active: true
+                joining_date: new Date().toISOString().split('T')[0], salary: '', is_active: true
             });
         }
         setIsModalOpen(true);
@@ -52,11 +52,15 @@ const StaffDirectory = () => {
         try {
             const url = modalMode === 'add' ? `${API_BASE_URL}/staff/` : `${API_BASE_URL}/staff/${currentStaff.id}`;
             const method = modalMode === 'add' ? 'POST' : 'PUT';
-            
+            const payload = {
+                ...currentStaff,
+                salary: currentStaff.salary ? parseFloat(currentStaff.salary) : null
+            };
+
             const resp = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(currentStaff)
+                body: JSON.stringify(payload)
             });
 
             if (resp.ok) {
@@ -110,6 +114,7 @@ const StaffDirectory = () => {
                                     <th>Profile</th>
                                     <th>Role & Skills</th>
                                     <th>Contact Info</th>
+                                    <th>Salary (₹)</th>
                                     <th>Status</th>
                                     <th style={{ textAlign: 'right' }}>Actions</th>
                                 </tr>
@@ -140,6 +145,7 @@ const StaffDirectory = () => {
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}><Phone size={14} className="text-muted" /> {emp.contact_info || '--'}</div>
                                                 </div>
                                             </td>
+                                            <td style={{ fontWeight: 600, color: '#10b981' }}>{emp.salary ? `₹${emp.salary.toLocaleString()}` : '--'}</td>
                                             <td>
                                                 <span className={`badge badge-${emp.is_active ? 'paid' : 'pending'}`}>
                                                     {emp.is_active ? 'Active' : 'Inactive'}
@@ -200,6 +206,10 @@ const StaffDirectory = () => {
                                     <div className="input-group">
                                         <label>Date of Joining</label>
                                         <input type="date" className="form-input" value={currentStaff.joining_date || ''} onChange={e => setCurrentStaff({...currentStaff, joining_date: e.target.value})} />
+                                    </div>
+                                    <div className="input-group">
+                                        <label>Salary (₹)</label>
+                                        <input type="number" step="0.01" className="form-input" placeholder="e.g. 50000" value={currentStaff.salary || ''} onChange={e => setCurrentStaff({...currentStaff, salary: e.target.value})} />
                                     </div>
                                 </div>
 

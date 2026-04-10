@@ -25,37 +25,100 @@ const SchoolDeepDive = ({ user }) => {
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [school, setSchool] = useState(null);
 
-    // Mock School Data Fetching
+    const [realStudents, setRealStudents] = useState([]);
+    const [dbActivities, setDbActivities] = useState([]);
+    const [activityStudents, setActivityStudents] = useState([]);
+
+    // Data Fetching
     useEffect(() => {
-        // In a real app, fetch school by ID
-        setSchool({
-            id: id,
-            name: "EduCore+ High School",
-            branch: "Main Campus",
-            code: "ED001",
-            city: "Mumbai",
-            state: "Maharashtra",
-            contact: "+91 98765 43210",
-            email: "admin.mumbai@educore.edu",
-            logo: null,
-            totalStudents: 461,
-            revenue: 404077
-        });
+        const fetchSchoolData = async () => {
+            try {
+                // Fetch school details
+                const schoolResp = await fetch(`http://localhost:8000/schools/${id}`);
+                let schoolData = {};
+                if (schoolResp.ok) {
+                    schoolData = await schoolResp.json();
+                } else {
+                    schoolData = {
+                        id: id,
+                        name: "EduCore+ High School (Fallback)",
+                        branch: "Main Campus",
+                        code: "ED001",
+                        city: "Mumbai",
+                        state: "Maharashtra",
+                        contact: "+91 98765 43210",
+                        email: "admin.mumbai@educore.edu"
+                    };
+                }
+
+                // Fetch students for this school
+                const studentResp = await fetch(`http://localhost:8000/students/?school_id=${id}`);
+                let studentsData = [];
+                if (studentResp.ok) {
+                    const data = await studentResp.json();
+                    studentsData = data.map(s => ({
+                        id: s.id,
+                        name: s.name,
+                        roll: s.roll_number || s.id.toString(),
+                        sex: s.gender === 'Male' ? 'M' : s.gender === 'Female' ? 'F' : 'O',
+                        section: s.section || 'A',
+                        blood: s.blood_group || 'O+',
+                        phone: s.father_phone || 'N/A',
+                        parent: s.father_name || 'N/A',
+                        joining: s.admission_date || 'N/A',
+                        medical: s.medical_conditions || 'None',
+                        address: s.permanent_address || 'N/A',
+                        status: s.payment_status || 'Pending'
+                    }));
+                }
+
+                // Fetch activities
+                const activitiesResp = await fetch(`http://localhost:8000/activities/?school_id=${id}`);
+                if (activitiesResp.ok) {
+                    const acts = await activitiesResp.json();
+                    setDbActivities(acts);
+                    if (acts.length > 0 && activeActivity === 'Sports') {
+                        setActiveActivity(acts[0].id);
+                    }
+                }
+
+                setRealStudents(studentsData);
+                setSchool({
+                    ...schoolData,
+                    totalStudents: studentsData.length,
+                    revenue: 404077 // Dummy revenue
+                });
+
+            } catch (error) {
+                console.error("Failed to fetch school deep dive data:", error);
+            }
+        };
+
+        if (id) {
+            fetchSchoolData();
+        }
     }, [id]);
 
-    // Dummy Data Generators
-    const dummyStudents = [
-        { id: 101, name: "Arjun Mehta", roll: "10", sex: "M", section: "A", blood: "O+", phone: "9876512345", parent: "Rajesh Mehta", joining: "12-Jun-2023", medical: "None", address: "Flat 402, Skyline Apts, Mumbai" },
-        { id: 102, name: "Sanya Gupta", roll: "12", sex: "F", section: "A", blood: "A+", phone: "9876523456", parent: "Karan Gupta", joining: "15-Jun-2023", medical: "Peanut Allergy", address: "Bungalow 12, Palm Grove, Mumbai" },
-        { id: 201, name: "Ishan Verma", roll: "05", sex: "M", section: "B", blood: "B-", phone: "9876534567", parent: "Vijay Verma", joining: "01-Jul-2023", medical: "Asthma", address: "Sector 5, Nerul, Navi Mumbai" },
-        { id: 301, name: "Ananya Iyer", roll: "22", sex: "F", section: "C", blood: "AB+", phone: "9876545678", parent: "Suresh Iyer", joining: "20-Aug-2023", medical: "None", address: "Plot 89, Hiranandani, Powai" },
-    ];
+    useEffect(() => {
+        const fetchEnrolledStudents = async () => {
+            if (!activeActivity || activeActivity === 'Sports') return;
+            try {
+                const resp = await fetch(`http://localhost:8000/activities/${activeActivity}/students`);
+                if (resp.ok) {
+                    setActivityStudents(await resp.json());
+                }
+            } catch (err) {
+                console.error("Failed to fetch activity students", err);
+            }
+        };
+        fetchEnrolledStudents();
+    }, [activeActivity]);
 
     const staff = [
-        { id: 501, name: "Dr. Ramesh Rao", role: "Principal", dept: "Administration", status: "Active", phone: "9988776655" },
-        { id: 502, name: "Mrs. Leela Nair", role: "Sr. Teacher", dept: "Mathematics", status: "Active", phone: "9988776644" },
-        { id: 503, name: "Mr. David Wilson", role: "Coach", dept: "Physical Education", status: "Active", phone: "9988776633" },
-        { id: 504, name: "Ms. Sarah Chen", role: "Librarian", dept: "Media Center", status: "Leave", phone: "9988776622" },
+        { id: 501, name: "Dr. Ramesh Rao", role: "Principal", dept: "Administration", status: "Active", phone: "9988776655", salary: 150000 },
+        { id: 502, name: "Mrs. Leela Nair", role: "Sr. Teacher", dept: "Mathematics", status: "Active", phone: "9988776644", salary: 85000 },
+        { id: 503, name: "Mr. David Wilson", role: "Coach", dept: "Physical Education", status: "Active", phone: "9988776633", salary: 65000 },
+        { id: 504, name: "Ms. Sarah Chen", role: "Librarian", dept: "Media Center", status: "Leave", phone: "9988776622", salary: 55000 },
     ];
 
     const activities = [
@@ -188,8 +251,8 @@ const SchoolDeepDive = ({ user }) => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {dummyStudents.filter(s => s.section === activeSection).length > 0 ? (
-                                        dummyStudents.filter(s => s.section === activeSection).map(s => (
+                                    {realStudents.filter(s => s.section === activeSection).length > 0 ? (
+                                        realStudents.filter(s => s.section === activeSection).map(s => (
                                             <tr key={s.id}>
                                                 <td style={{ fontWeight: 800, color: 'var(--primary)' }}>{s.roll}</td>
                                                 <td>
@@ -226,6 +289,7 @@ const SchoolDeepDive = ({ user }) => {
                                     <th>Designation</th>
                                     <th>Department</th>
                                     <th>Phone</th>
+                                    <th>Salary (₹)</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -236,6 +300,7 @@ const SchoolDeepDive = ({ user }) => {
                                         <td>{s.role}</td>
                                         <td>{s.dept}</td>
                                         <td>{s.phone}</td>
+                                        <td style={{ fontWeight: 600, color: '#10b981' }}>{s.salary ? `₹${s.salary.toLocaleString()}` : '—'}</td>
                                         <td><span className={`badge ${s.status === 'Active' ? 'badge-paid' : 'badge-pending'}`}>{s.status}</span></td>
                                     </tr>
                                 ))}
@@ -315,62 +380,73 @@ const SchoolDeepDive = ({ user }) => {
                     <div style={{ display: 'grid', gridTemplateColumns: '300px minmax(0, 1fr)', gap: '2.5rem' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: 'var(--text-muted)' }}>Available Modules</h3>
-                            {activities.map(act => (
-                                <button 
-                                    key={act.name}
-                                    onClick={() => setActiveActivity(act.name)}
-                                    className="btn"
-                                    style={{ 
-                                        justifyContent: 'flex-start',
-                                        padding: '1rem 1.25rem',
-                                        background: activeActivity === act.name ? 'var(--primary)' : 'var(--surface)',
-                                        color: activeActivity === act.name ? 'white' : 'var(--text)',
-                                        border: '1px solid var(--border)',
-                                        gap: '1rem',
-                                        borderRadius: '16px'
-                                    }}
-                                >
-                                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: activeActivity === act.name ? 'rgba(255,255,255,0.2)' : 'var(--surface-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        {act.icon}
-                                    </div>
-                                    <span style={{ fontWeight: 600 }}>{act.name}</span>
-                                </button>
-                            ))}
+                            {dbActivities.length === 0 ? (
+                                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>No extracurricular activities configured.</p>
+                            ) : (
+                                dbActivities.map(act => (
+                                    <button 
+                                        key={act.id}
+                                        onClick={() => setActiveActivity(act.id)}
+                                        className="btn"
+                                        style={{ 
+                                            justifyContent: 'flex-start',
+                                            padding: '1rem 1.25rem',
+                                            background: activeActivity === act.id ? 'var(--primary)' : 'var(--surface)',
+                                            color: activeActivity === act.id ? 'white' : 'var(--text)',
+                                            border: '1px solid var(--border)',
+                                            gap: '1rem',
+                                            borderRadius: '16px'
+                                        }}
+                                    >
+                                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: activeActivity === act.id ? 'rgba(255,255,255,0.2)' : 'var(--surface-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Award size={18} />
+                                        </div>
+                                        <div style={{ textAlign: 'left' }}>
+                                            <span style={{ fontWeight: 600, display: 'block' }}>{act.name}</span>
+                                            <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>{act.enrolled_count} Enrolled</span>
+                                        </div>
+                                    </button>
+                                ))
+                            )}
                         </div>
                         <div className="animate-fade-in">
-                            <div className="glass-card" style={{ padding: '2rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                                    <div>
-                                        <h2 style={{ fontSize: '1.5rem' }}>{activeActivity} Students</h2>
-                                        <p style={{ color: 'var(--text-muted)' }}>Currently enrolled in extracurricular {activeActivity.toLowerCase()} programs</p>
+                            {activeActivity !== 'Sports' && dbActivities.find(a => a.id === activeActivity) && (
+                                <div className="glass-card" style={{ padding: '2rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                                        <div>
+                                            <h2 style={{ fontSize: '1.5rem' }}>{dbActivities.find(a => a.id === activeActivity).name} Students</h2>
+                                            <p style={{ color: 'var(--text-muted)' }}>Currently enrolled in extracurricular program</p>
+                                        </div>
+                                        <div style={{ padding: '0.75rem 1.5rem', background: 'var(--surface-hover)', borderRadius: '12px', border: '1px solid var(--border)', fontWeight: 700 }}>
+                                            {activityStudents.length} Enrolled
+                                        </div>
                                     </div>
-                                    <div style={{ padding: '0.75rem 1.5rem', background: 'var(--surface-hover)', borderRadius: '12px', border: '1px solid var(--border)', fontWeight: 700 }}>
-                                        {Math.floor(Math.random() * 50) + 10} Enrolled
-                                    </div>
-                                </div>
-                                <div className="table-container">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Student</th>
-                                                <th>Class</th>
-                                                <th>Program Variant</th>
-                                                <th>Enrollment Date</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {dummyStudents.slice(0, 3).map((s, i) => (
-                                                <tr key={s.id}>
-                                                    <td style={{ fontWeight: 600 }}>{s.name}</td>
-                                                    <td>Class {s.section === 'A' ? '10' : '8'}</td>
-                                                    <td><span className="badge" style={{ background: 'var(--surface-hover)' }}>{activities.find(a => a.name === activeActivity).list[i % 4]}</span></td>
-                                                    <td>12-Jan-2024</td>
+                                    <div className="table-container">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Student</th>
+                                                    <th>Class</th>
+                                                    <th>Enrollment Date</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                                {activityStudents.length === 0 ? (
+                                                    <tr><td colSpan={3} style={{textAlign: 'center', color: 'var(--text-muted)', padding: '2rem'}}>No students enrolled yet.</td></tr>
+                                                ) : (
+                                                    activityStudents.map((s, i) => (
+                                                        <tr key={s.id}>
+                                                            <td style={{ fontWeight: 600 }}>{s.name}</td>
+                                                            <td>Class {s.current_class}</td>
+                                                            <td>{s.enrollment_date}</td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 )}

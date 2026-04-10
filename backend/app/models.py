@@ -111,6 +111,9 @@ class FeeHead(Base):
     school_id = Column(Integer, ForeignKey("schools.id"))
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
+    amount = Column(Float, default=0.0)           # Base fee amount defined by school admin
+    frequency = Column(String(50), default="Annual")  # Annual / Quarterly / Monthly / One-time
+    class_name = Column(String(50), nullable=True)  # e.g. "Class 1", "10"
     is_active = Column(Boolean, default=True)
 
     school = relationship("School")
@@ -150,6 +153,7 @@ class Staff(Base):
     is_active = Column(Boolean, default=True)
     photo_url = Column(Text, nullable=True)
     joining_date = Column(Date, nullable=True)
+    salary = Column(Float, nullable=True)
 
 class ExtracurricularActivity(Base):
     __tablename__ = "extracurricular_activities"
@@ -159,6 +163,7 @@ class ExtracurricularActivity(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text)
     capacity = Column(Integer, nullable=True)
+    cost = Column(Float, default=0.0)
     
     enrollments = relationship("ActivityEnrollment", back_populates="activity")
 
