@@ -61,8 +61,14 @@ const SidebarLayout = ({ user, onLogout }) => {
   ];
 
   const allowedNav = navItems.filter(item => {
-    // Super Admin and regular School Administrator get everything basic
-    if (user?.role === 'Super Admin' || user?.role === 'Administrator') return true;
+    // Super Admin gets everything
+    if (user?.role === 'Super Admin') return true;
+
+    // Administrator explicitly gets only school-level operations
+    if (user?.role === 'Administrator') {
+      const adminAllowed = ['/', '/students', '/fees', '/fee-settings', '/activities', '/staff'];
+      return adminAllowed.includes(item.path);
+    }
     
     if (item.perms.includes('always')) return true;
 

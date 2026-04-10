@@ -165,7 +165,7 @@ const Dashboard = () => {
                         <div style={{ width: '8px', height: '24px', background: 'var(--primary)', borderRadius: '4px' }}></div>
                         Revenue Distribution
                     </h3>
-                    <div style={{ flex: 1, minHeight: '250px' }}>
+                    <div style={{ width: '100%', height: 250 }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie 
@@ -194,7 +194,7 @@ const Dashboard = () => {
                         <div style={{ width: '8px', height: '24px', background: '#ec4899', borderRadius: '4px' }}></div>
                         Class-wise Registration Count
                     </h3>
-                    <div style={{ flex: 1, minHeight: '250px' }}>
+                    <div style={{ width: '100%', height: 250 }}>
                         {summary.classDistribution && summary.classDistribution.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={summary.classDistribution}>
@@ -216,7 +216,7 @@ const Dashboard = () => {
                         <div style={{ width: '8px', height: '24px', background: '#8b5cf6', borderRadius: '4px' }}></div>
                         Activity Participation
                     </h3>
-                    <div style={{ flex: 1, minHeight: '250px' }}>
+                    <div style={{ width: '100%', height: 250 }}>
                         {summary.activityDistribution && summary.activityDistribution.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={summary.activityDistribution} layout="vertical">

@@ -63,10 +63,10 @@ const App = () => {
         <Route path="/" element={<SidebarLayout user={user} onLogout={handleLogout} />}>
           <Route index element={<Dashboard user={user} />} />
           <Route path="students" element={
-            hasPermission(['view_students', 'edit_students']) ? <StudentDirectory user={user} /> : <Navigate to="/" replace />
+            hasPermission(['view_students', 'edit_students']) || user.role === 'Administrator' ? <StudentDirectory user={user} /> : <Navigate to="/" replace />
           } />
           <Route path="fees" element={
-            hasPermission(['record_payments', 'print_receipts']) ? <FeePanel user={user} /> : <Navigate to="/" replace />
+            hasPermission(['record_payments', 'print_receipts']) || user.role === 'Administrator' ? <FeePanel user={user} /> : <Navigate to="/" replace />
           } />
           <Route path="schools" element={
             hasPermission(['create_school', 'enable_features']) ? <SchoolManagement user={user} /> : <Navigate to="/" replace />
