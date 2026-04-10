@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Download, UserPlus, Eye, Edit3, Trash2, X, Check, Camera, FileText, CreditCard, Filter } from 'lucide-react';
+import { Search, Download, UserPlus, Eye, Edit3, Trash2, X, Check, Camera, FileText, CreditCard, Filter, Clock } from 'lucide-react';
 
 const StudentDirectory = ({ user }) => {
     const navigate = useNavigate();
+    const [viewMode, setViewMode] = useState('directory'); // 'directory' or 'audits'
+    const [auditLogs, setAuditLogs] = useState([]);
+    const isAdminUser = user?.role === 'Administration User';
     const [searchTerm, setSearchTerm] = useState('');
     const [students, setStudents] = useState([]);
-    const [isIdCreated, setIsIdCreated] = useState(false);
-
     const [schools, setSchools] = useState([]);
-    const [selectedSchoolId, setSelectedSchoolId] = useState(null);
+    const [selectedSchoolId, setSelectedSchoolId] = useState(user?.school_id || null);
     const [filterClass, setFilterClass] = useState('All');
     const [filterSection, setFilterSection] = useState('All');
-    const [feeHeads, setFeeHeads] = useState([]);
 
     const hasPermission = (perms) => {
         if (user?.role === 'Super Admin') return true;
@@ -31,15 +31,32 @@ const StudentDirectory = ({ user }) => {
         const init = async () => {
             await fetchSchools();
             await fetchStudents();
+            if (viewMode === 'audits') {
+                await fetchAudits();
+            }
         };
         init();
-    }, []);
+    }, [viewMode]);
 
     useEffect(() => {
         if (selectedSchoolId) {
             fetchStudents();
+            if (viewMode === 'audits') fetchAudits();
         }
-    }, [selectedSchoolId]);
+    }, [selectedSchoolId, viewMode]);
+
+    const fetchAudits = async () => {
+        try {
+            const url = `http://localhost:8000/fees/audits?school_id=${selectedSchoolId}`;
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                setAuditLogs(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch audits:", error);
+        }
+    };
 
     const fetchSchools = async () => {
         try {
@@ -59,8 +76,8 @@ const StudentDirectory = ({ user }) => {
     const fetchStudents = async () => {
         try {
             const url = selectedSchoolId 
-                ? `http://localhost:8000/students/?school_id=${selectedSchoolId}`
-                : 'http://localhost:8000/students/';
+                ? `http://localhost:8000/students/?school_id=${selectedSchoolId}&role=${user?.role}`
+                : `http://localhost:8000/students/?role=${user?.role}`;
             const response = await fetch(url);
             if (response.ok) {
                 const data = await response.json();
@@ -84,7 +101,6 @@ const StudentDirectory = ({ user }) => {
                     prevSchool: s.previous_school,
                     guardianName: s.guardian_details
                 }));
-                // Filter by school if necessary (handled by backend)
                 setStudents(mappedData);
             }
         } catch (error) {
@@ -92,6 +108,7 @@ const StudentDirectory = ({ user }) => {
         }
     };
 
+    const [isIdCreated, setIsIdCreated] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('add');
     const [currentStudent, setCurrentStudent] = useState({
@@ -111,10 +128,12 @@ const StudentDirectory = ({ user }) => {
         const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                              (s.admissionNo && s.admissionNo.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesClass = filterClass === 'All' || (s.class && s.class.toString() === filterClass);
-        return matchesSearch && matchesClass;
+        const matchesSection = filterSection === 'All' || (s.section && s.section === filterSection);
+        return matchesSearch && matchesClass && matchesSection;
     });
 
     const handleOpenModal = (mode, student = null) => {
+        if (isAdminUser && (mode === 'add' || mode === 'edit' || mode === 'delete')) return;
         setModalMode(mode);
         if (student) {
             setCurrentStudent({
@@ -208,6 +227,7 @@ const StudentDirectory = ({ user }) => {
     };
 
     const handleDelete = async (id) => {
+        if (isAdminUser) return;
         if (window.confirm('Are you sure you want to delete this student record?')) {
             try {
                 const response = await fetch(`http://localhost:8000/students/${id}`, {
@@ -251,56 +271,92 @@ const StudentDirectory = ({ user }) => {
                     <p>Onboard and manage academic student profiles for {user?.school_info?.name || 'your school'}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    {hasPermission(['edit_students']) && (
+                    {!isAdminUser && hasPermission(['edit_students']) && (
                         <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
                             <UserPlus size={20} />
                             <span>Add Student</span>
                         </button>
                     )}
-                    <button className="btn" onClick={handleExportData} style={{ background: 'var(--surface-hover)', border: '1px solid var(--border)' }}>
-                        <Download size={20} />
-                        <span>Export CSV</span>
-                    </button>
+                    {!isAdminUser && (
+                        <button className="btn" onClick={handleExportData} style={{ background: 'var(--surface-hover)', border: '1px solid var(--border)' }}>
+                            <Download size={20} />
+                            <span>Export CSV</span>
+                        </button>
+                    )}
                 </div>
             </header>
 
-            <div className="glass-card" style={{ padding: '1.25rem', marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                <div style={{ flex: 1, position: 'relative' }}>
-                    <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={18} />
-                    <input 
-                        type="text" 
-                        placeholder="Search student by name or admission no..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="form-input"
-                        style={{ paddingLeft: '3rem' }}
-                    />
-                </div>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface)', padding: '0 1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                        <Filter size={16} style={{ color: 'var(--text-muted)' }} />
-                        <select 
-                            style={{ background: 'transparent', border: 'none', color: 'var(--text)', padding: '0.75rem 0', outline: 'none', fontSize: '0.875rem' }}
-                            value={filterClass}
-                            onChange={(e) => setFilterClass(e.target.value)}
-                        >
-                            <option value="All">All Classes</option>
-                            {[...Array(12)].map((_, i) => (
-                                <option key={i + 1} value={i + 1}>Class {i + 1}</option>
-                            ))}
-                        </select>
-                        <div style={{ width: '1px', height: '20px', background: 'var(--border)' }}></div>
-                        <select 
-                            style={{ background: 'transparent', border: 'none', color: 'var(--text)', padding: '0.75rem 0', outline: 'none', fontSize: '0.875rem' }}
-                            value={filterSection}
-                            onChange={(e) => setFilterSection(e.target.value)}
-                        >
-                            <option value="All">All Sections</option>
-                            {['A', 'B', 'C', 'D'].map(sec => <option key={sec} value={sec}>Sec {sec}</option>)}
-                        </select>
+            {/* View Tabs */}
+            <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)' }}>
+                <button 
+                    onClick={() => setViewMode('directory')}
+                    style={{ 
+                        padding: '0.75rem 1rem', 
+                        background: 'transparent', 
+                        border: 'none', 
+                        borderBottom: viewMode === 'directory' ? '2px solid var(--primary)' : '2px solid transparent',
+                        color: viewMode === 'directory' ? 'var(--primary)' : 'var(--text-muted)',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                    }}
+                >
+                    Student Directory
+                </button>
+                <button 
+                    onClick={() => setViewMode('audits')}
+                    style={{ 
+                        padding: '0.75rem 1rem', 
+                        background: 'transparent', 
+                        border: 'none', 
+                        borderBottom: viewMode === 'audits' ? '2px solid var(--primary)' : '2px solid transparent',
+                        color: viewMode === 'audits' ? 'var(--primary)' : 'var(--text-muted)',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                    }}
+                >
+                    Audit Action history
+                </button>
+            </div>
+
+            {viewMode === 'directory' ? (
+                <>
+                <div className="glass-card" style={{ padding: '1.25rem', marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                        <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={18} />
+                        <input 
+                            type="text" 
+                            placeholder="Search student by name or admission no..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="form-input"
+                            style={{ paddingLeft: '3rem' }}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--surface)', padding: '0 1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                            <Filter size={16} style={{ color: 'var(--text-muted)' }} />
+                            <select 
+                                style={{ background: 'transparent', border: 'none', color: 'var(--text)', padding: '0.75rem 0', outline: 'none', fontSize: '0.875rem' }}
+                                value={filterClass}
+                                onChange={(e) => setFilterClass(e.target.value)}
+                            >
+                                <option value="All">All Classes</option>
+                                {[...Array(12)].map((_, i) => (
+                                    <option key={i + 1} value={i + 1}>Class {i + 1}</option>
+                                ))}
+                            </select>
+                            <div style={{ width: '1px', height: '20px', background: 'var(--border)' }}></div>
+                            <select 
+                                style={{ background: 'transparent', border: 'none', color: 'var(--text)', padding: '0.75rem 0', outline: 'none', fontSize: '0.875rem' }}
+                                value={filterSection}
+                                onChange={(e) => setFilterSection(e.target.value)}
+                            >
+                                <option value="All">All Sections</option>
+                                {['A', 'B', 'C', 'D'].map(sec => <option key={sec} value={sec}>Sec {sec}</option>)}
+                            </select>
+                        </div>
                     </div>
                 </div>
-            </div>
 
             <div className="table-container">
                 <table>
@@ -310,14 +366,14 @@ const StudentDirectory = ({ user }) => {
                             <th>Student Details</th>
                             <th>Parent Details</th>
                             <th>Class/Section</th>
-                            <th>Status</th>
-                            <th style={{ textAlign: 'right' }}>Actions</th>
+                            {!isAdminUser && <th>Status</th>}
+                            {!isAdminUser && <th style={{ textAlign: 'right' }}>Actions</th>}
                         </tr>
                     </thead>
                     <tbody>
                         {filtered.length === 0 ? (
                             <tr>
-                                <td colSpan="6" style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
+                                <td colSpan={isAdminUser ? "4" : "6"} style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
                                     No students found in this school directory.
                                 </td>
                             </tr>
@@ -341,30 +397,69 @@ const StudentDirectory = ({ user }) => {
                                         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>P: {s.fatherPhone}</p>
                                     </td>
                                     <td>{s.class}-{s.section}</td>
-                                    <td><span className={`badge badge-${s.status?.toLowerCase() || 'pending'}`}>{s.status || 'Pending'}</span></td>
-                                    <td>
-                                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                            <button onClick={() => handleOpenModal('view', s)} title="View" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'transparent' }}>
-                                                <Eye size={18} />
-                                            </button>
-                                            {hasPermission(['edit_students']) && (
-                                                <button onClick={() => handleOpenModal('edit', s)} title="Edit" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'transparent' }}>
-                                                <Edit3 size={18} />
+                                    {!isAdminUser && (
+                                        <td><span className={`badge badge-${s.status?.toLowerCase() || 'pending'}`}>{s.status || 'Pending'}</span></td>
+                                    )}
+                                    {!isAdminUser && (
+                                        <td>
+                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                <button onClick={() => handleOpenModal('view', s)} title="View" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'transparent' }}>
+                                                    <Eye size={18} />
                                                 </button>
-                                            )}
-                                            {hasPermission(['delete_students']) && (
-                                                <button onClick={() => handleDelete(s.id)} title="Delete" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
-                                                <Trash2 size={18} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </td>
+                                                {hasPermission(['edit_students']) && (
+                                                    <button onClick={() => handleOpenModal('edit', s)} title="Edit" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'transparent' }}>
+                                                    <Edit3 size={18} />
+                                                    </button>
+                                                )}
+                                                {hasPermission(['delete_students']) && (
+                                                    <button onClick={() => handleDelete(s.id)} title="Delete" className="btn" style={{ padding: '0.5rem', border: '1px solid var(--border)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
+                                                    <Trash2 size={18} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    )}
                                 </tr>
                             ))
                         )}
                     </tbody>
                 </table>
             </div>
+            </>
+            ) : (
+                <div className="table-container">
+                    <div className="glass-card" style={{ padding: '1.5rem', background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.1)', marginBottom: '2rem' }}>
+                        <h3 style={{ fontSize: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div style={{ color: 'var(--primary)' }}><Clock size={20} /></div>
+                            Complete Activity Audit Trail
+                        </h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Action Performed</th>
+                                    <th>Detailed Activity Log</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {auditLogs.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="3" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No audit activities recorded for this school yet.</td>
+                                    </tr>
+                                ) : (
+                                    auditLogs.map(log => (
+                                        <tr key={log.id}>
+                                            <td style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{new Date(log.timestamp).toLocaleString()}</td>
+                                            <td><span className="badge" style={{ background: 'var(--surface-hover)', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>{log.action}</span></td>
+                                            <td style={{ fontSize: '0.875rem', fontWeight: 500 }}>{log.details}</td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             {isModalOpen && (
                 <div className="overlay">

@@ -31,7 +31,11 @@ class Payment(PaymentBase):
 
 @router.get("/dashboard-summary")
 def get_dashboard_summary(school_id: int, standard: str = "All", section: str = "All", db: Session = Depends(get_db)):
-    query = db.query(models.Student).filter(models.Student.school_id == school_id)
+    # school_id = 0 means Super Admin view (all schools)
+    query = db.query(models.Student)
+    if school_id > 0:
+        query = query.filter(models.Student.school_id == school_id)
+        
     if standard != "All":
         query = query.filter(models.Student.current_class == standard)
     if section != "All":

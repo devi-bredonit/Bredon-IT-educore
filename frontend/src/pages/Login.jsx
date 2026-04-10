@@ -71,10 +71,10 @@ const Login = ({ onLogin }) => {
     }}>
       <div className="glass-card" style={{ width: '100%', maxWidth: '400px', padding: '3rem', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)' }}>
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.5rem', background: 'linear-gradient(to right, #ffffff, #fcd34d)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.5rem', background: 'linear-gradient(to right, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             EduCore<sup>+</sup>
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.7)' }}>Premium School Management MVP</p>
+          <p style={{ color: 'var(--text-muted)' }}>Premium School Management MVP</p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -85,7 +85,7 @@ const Login = ({ onLogin }) => {
           )}
           
           <div style={{ position: 'relative' }}>
-            <User style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.5)' }} size={20} />
+            <User style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={20} />
             <input 
               type="text" 
               placeholder="Username" 
@@ -96,16 +96,16 @@ const Login = ({ onLogin }) => {
                 width: '100%', 
                 padding: '0.875rem 1rem 0.875rem 3rem', 
                 borderRadius: '12px', 
-                background: 'rgba(255,255,255,0.05)', 
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: 'white',
+                background: 'white', 
+                border: '1px solid var(--border)',
+                color: 'var(--text)',
                 outline: 'none'
               }}
             />
           </div>
           
           <div style={{ position: 'relative' }}>
-            <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.5)' }} size={20} />
+            <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={20} />
             <input 
               type="password" 
               placeholder="Password" 
@@ -116,15 +116,15 @@ const Login = ({ onLogin }) => {
                 width: '100%', 
                 padding: '0.875rem 1rem 0.875rem 3rem', 
                 borderRadius: '12px', 
-                background: 'rgba(255,255,255,0.05)', 
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: 'white',
+                background: 'white', 
+                border: '1px solid var(--border)',
+                color: 'var(--text)',
                 outline: 'none'
               }}
             />
           </div>
 
-          <button type="submit" disabled={isLoading} className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem', background: 'white', color: '#4f46e5' }}>
+          <button type="submit" disabled={isLoading} className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
             {isLoading ? (
                 <Loader2 className="animate-spin" size={20} />
             ) : (
@@ -136,13 +136,13 @@ const Login = ({ onLogin }) => {
           </button>
         </form>
 
-        <div style={{ marginTop: '2.5rem', textAlign: 'center', fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)' }}>
-          <p style={{ marginBottom: '1rem', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div style={{ marginTop: '2.5rem', textAlign: 'center', fontSize: '0.875rem', color: 'var(--text)' }}>
+          <p style={{ marginBottom: '1rem', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Super Admin • Corporate • Admin
           </p>
-          <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '1.5rem 0' }}></div>
+          <div style={{ height: '1px', background: 'var(--border)', margin: '1.5rem 0' }}></div>
           <p>
-            New institution? <Link to="/register" style={{ color: 'white', fontWeight: 700, textDecoration: 'none', borderBottom: '1.5px solid rgba(255,255,255,0.3)', paddingBottom: '2px', marginLeft: '0.5rem' }}>Register your school</Link>
+            New institution? <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'none', borderBottom: '1.5px solid var(--primary)', paddingBottom: '2px', marginLeft: '0.5rem' }}>Register your school</Link>
           </p>
         </div>
       </div>

@@ -11,6 +11,8 @@ import FeeSettings from './pages/FeeSettings';
 import RegisterSchool from './pages/RegisterSchool';
 import Login from './pages/Login';
 
+import SchoolDeepDive from './pages/SchoolDeepDive';
+
 const App = () => {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
 
@@ -66,6 +68,9 @@ const App = () => {
           } />
           <Route path="schools" element={
             hasPermission(['create_school', 'enable_features']) ? <SchoolManagement user={user} /> : <Navigate to="/" replace />
+          } />
+          <Route path="schools/:id" element={
+            hasPermission(['create_school', 'enable_features']) ? <SchoolDeepDive user={user} /> : <Navigate to="/" replace />
           } />
           <Route path="roles" element={
             hasPermission(['create_roles']) || user.role === 'Corporate User' ? <RoleManagement user={user} /> : <Navigate to="/" replace />

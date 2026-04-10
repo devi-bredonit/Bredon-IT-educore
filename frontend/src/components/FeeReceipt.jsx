@@ -259,7 +259,8 @@ const FeeReceipt = ({ student, school, paymentData, receiptNo, date, isPreview =
         @media print {
             @page {
                 size: A4 landscape;
-                margin: 0;
+                size: A4 portrait;
+                margin: 10mm;
             }
             body {
                 margin: 0;
@@ -270,24 +271,27 @@ const FeeReceipt = ({ student, school, paymentData, receiptNo, date, isPreview =
                 display: none !important;
             }
             #fee-receipt-capture-id {
-                width: 210mm !important;
-                height: 148mm !important;
-                border: 1px solid #003366 !important;
-                box-shadow: none !important;
-                margin: 0 !important;
-                padding: 10mm !important;
-                position: fixed !important;
-                top: 0 !important;
-                left: 0 !important;
-                overflow: hidden !important;
+                flex-direction: column !important;
+                padding: 0 !important;
+                border: none !important;
+            }
+            .half-page-receipt {
+                width: 100% !important;
+                height: 50% !important; /* Exactly half A4 */
+                padding: 10mm 15mm !important;
+                box-sizing: border-box !important;
+                border-bottom: 2px dashed #003366 !important;
+                page-break-inside: avoid !important;
             }
             /* Scale contents to fit the half-height */
-            .school-name { font-size: 24px !important; }
-            .receipt-title { font-size: 18px !important; letter-spacing: 4px !important; }
-            .main-grid { gap: 20px !important; margin-top: 10px !important; }
-            .footer-signatures { margin-top: 30px !important; }
-            .seal-circle { width: 100px !important; height: 100px !important; }
-            .system-msg { margin-top: 20px !important; }
+            .school-name { font-size: 20px !important; margin-bottom: 2px !important; }
+            .school-info { font-size: 11px !important; }
+            .receipt-title { font-size: 16px !important; letter-spacing: 4px !important; }
+            .main-grid { gap: 15px !important; margin-top: 5px !important; height: auto !important; }
+            .details-table td, .fee-table td, .fee-table th { padding: 4px 8px !important; font-size: 12px !important; }
+            .footer-signatures { margin-top: 15px !important; }
+            .seal-circle { width: 70px !important; height: 70px !important; }
+            .system-msg { margin-top: 10px !important; font-size: 10px !important; }
         }
         `}
       </style>

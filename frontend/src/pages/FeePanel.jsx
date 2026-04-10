@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { IndianRupee, Printer, Mail, Plus, Search, ArrowLeft, Download, CheckCircle2, CreditCard, Loader2 } from 'lucide-react';
+import { IndianRupee, Printer, Mail, Plus, Search, ArrowLeft, Download, CheckCircle2, CreditCard, Loader2, Filter, Wallet, X } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { useLocation, useNavigate } from 'react-router-dom';
