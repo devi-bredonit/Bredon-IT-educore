@@ -96,9 +96,6 @@ const App = () => {
           <Route path="staff" element={
             hasPermission(['create_user']) || user.role === 'Administrator' ? <StaffDirectory user={user} /> : <Navigate to="/" replace />
           } />
-          <Route path="staff" element={
-            hasPermission(['create_user']) || user.role === 'Administrator' ? <StaffDirectory user={user} /> : <Navigate to="/" replace />
-          } /> */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
