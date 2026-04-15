@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Download, UserPlus, Eye, Edit3, Trash2, X, Check, Camera, FileText, CreditCard, Filter, Clock } from 'lucide-react';
+import { Search, Download, UserPlus, Eye, Edit3, Trash2, X, Check, Camera, FileText, CreditCard, Filter, Clock, AlertCircle, Loader2 } from 'lucide-react';
 
 const StudentDirectory = ({ user }) => {
     const navigate = useNavigate();
@@ -16,6 +16,9 @@ const StudentDirectory = ({ user }) => {
     const [feeHeads, setFeeHeads] = useState([]);
     const [classFeeStructures, setClassFeeStructures] = useState([]);
     const [activitiesList, setActivitiesList] = useState([]);
+    const [showToast, setShowToast] = useState(null);
+    const [admissionExists, setAdmissionExists] = useState(false);
+    const [isCheckingAdmission, setIsCheckingAdmission] = useState(false);
 
     const hasPermission = (perms) => {
         if (user?.role === 'Super Admin' || user?.role === 'Administrator') return true;
@@ -116,9 +119,10 @@ const StudentDirectory = ({ user }) => {
 
     const fetchStudents = async () => {
         try {
-            const url = selectedSchoolId
+            const url = (selectedSchoolId !== null && selectedSchoolId !== undefined)
                 ? `http://localhost:8000/students/?school_id=${selectedSchoolId}&role=${user?.role}`
                 : `http://localhost:8000/students/?role=${user?.role}`;
+            
             const response = await fetch(url);
             if (response.ok) {
                 const data = await response.json();
@@ -143,9 +147,16 @@ const StudentDirectory = ({ user }) => {
                     guardianName: s.guardian_details
                 }));
                 setStudents(mappedData);
+            } else {
+                const errData = await response.json();
+                console.error("Server error:", errData);
+                setShowToast(`Error: ${errData.detail || 'Failed to fetch students'}`);
+                setTimeout(() => setShowToast(null), 5000);
             }
         } catch (error) {
             console.error("Failed to fetch students:", error);
+            setShowToast("Network error: Could not reach student server.");
+            setTimeout(() => setShowToast(null), 5000);
         }
     };
 
@@ -174,9 +185,26 @@ const StudentDirectory = ({ user }) => {
         return matchesSearch && matchesClass && matchesSection;
     });
 
+    const checkAdmissionUnique = async (admNo) => {
+        if (!admNo || modalMode !== 'add') return;
+        setIsCheckingAdmission(true);
+        try {
+            const resp = await fetch(`http://localhost:8000/students/check-admission?admission_number=${admNo}&school_id=${selectedSchoolId}`);
+            if (resp.ok) {
+                const data = await resp.json();
+                setAdmissionExists(data.exists);
+            }
+        } catch (e) {
+            console.error("Uniqueness check error:", e);
+        } finally {
+            setIsCheckingAdmission(false);
+        }
+    };
+
     const handleOpenModal = (mode, student = null) => {
         if (isAdminUser && (mode === 'add' || mode === 'edit' || mode === 'delete')) return;
         setModalMode(mode);
+        setAdmissionExists(false); // Reset uniqueness check state
         if (student) {
             setCurrentStudent({
                 ...student,
@@ -254,11 +282,14 @@ const StudentDirectory = ({ user }) => {
                     body: JSON.stringify(payload)
                 });
                 if (response.ok) {
+                    setShowToast("Student profile created successfully!");
                     fetchStudents();
                     setIsModalOpen(false);
+                    setTimeout(() => setShowToast(null), 3000);
                 } else {
                     const err = await response.json();
-                    alert(`Failed to create student: ${JSON.stringify(err.detail)}`);
+                    setShowToast(`Error: ${err.detail || 'Failed to create'}`);
+                    setTimeout(() => setShowToast(null), 5000);
                 }
             } else if (modalMode === 'edit') {
                 const response = await fetch(`http://localhost:8000/students/${currentStudent.id}`, {
@@ -267,15 +298,19 @@ const StudentDirectory = ({ user }) => {
                     body: JSON.stringify(payload)
                 });
                 if (response.ok) {
+                    setShowToast("Student record updated!");
                     fetchStudents();
                     setIsModalOpen(false);
+                    setTimeout(() => setShowToast(null), 3000);
                 } else {
-                    alert("Failed to update student.");
+                    setShowToast("Failed to update student record.");
+                    setTimeout(() => setShowToast(null), 5000);
                 }
             }
         } catch (error) {
             console.error("Error saving student:", error);
-            alert("Connection error.");
+            setShowToast("Network connection error.");
+            setTimeout(() => setShowToast(null), 5000);
         }
     };
 
@@ -312,8 +347,35 @@ const StudentDirectory = ({ user }) => {
         link.setAttribute('download', `students_${new Date().toISOString().split('T')[0]}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
-        link.click();
         document.body.removeChild(link);
+    };
+
+    const handleImportCSV = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch(`http://localhost:8000/students/import?school_id=${selectedSchoolId}`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                setShowToast("Bulk import successful!");
+                fetchStudents();
+            } else {
+                const err = await response.json();
+                setShowToast(`Import failed: ${err.detail || 'check file format'}`);
+            }
+        } catch (error) {
+            console.error("Import error:", error);
+            setShowToast("Network error during import.");
+        } finally {
+            event.target.value = '';
+        }
     };
 
     return (
@@ -325,10 +387,23 @@ const StudentDirectory = ({ user }) => {
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
                     {!isAdminUser && hasPermission(['edit_students']) && (
-                        <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
-                            <UserPlus size={20} />
-                            <span>New Admission</span>
-                        </button>
+                        <>
+                            <input
+                                type="file"
+                                id="csvImport"
+                                accept=".csv"
+                                style={{ display: 'none' }}
+                                onChange={handleImportCSV}
+                            />
+                            <button className="btn" onClick={() => document.getElementById('csvImport').click()} style={{ background: 'var(--surface-hover)', border: '1px solid var(--border)' }}>
+                                <FileText size={20} />
+                                <span>Import CSV</span>
+                            </button>
+                            <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
+                                <UserPlus size={20} />
+                                <span>New Admission</span>
+                            </button>
+                        </>
                     )}
                     {!isAdminUser && (
                         <button className="btn" onClick={handleExportData} style={{ background: 'var(--surface-hover)', border: '1px solid var(--border)' }}>
@@ -630,8 +705,24 @@ const StudentDirectory = ({ user }) => {
                                                     </select>
                                                 </div>
                                                 <div className="input-group">
-                                                    <label>Admission No*</label>
-                                                    <input type="text" required disabled={modalMode === 'view'} className="form-input" value={currentStudent.admission_number} onChange={e => setCurrentStudent({ ...currentStudent, admission_number: e.target.value })} />
+                                                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        Admission No*
+                                                        {isCheckingAdmission && <Loader2 size={12} className="animate-spin" />}
+                                                        {admissionExists && modalMode === 'add' && <span style={{ color: '#ef4444', fontSize: '0.7rem', fontWeight: 700 }}>Already exists!</span>}
+                                                    </label>
+                                                    <input 
+                                                        type="text" 
+                                                        required 
+                                                        disabled={modalMode === 'view'} 
+                                                        className="form-input" 
+                                                        style={{ borderColor: admissionExists && modalMode === 'add' ? '#ef4444' : 'var(--border)' }}
+                                                        value={currentStudent.admission_number} 
+                                                        onChange={e => {
+                                                            const val = e.target.value;
+                                                            setCurrentStudent({ ...currentStudent, admission_number: val });
+                                                        }}
+                                                        onBlur={e => checkAdmissionUnique(e.target.value)}
+                                                    />
                                                 </div>
                                                 <div className="input-group">
                                                     <label>Roll Number</label>
@@ -906,6 +997,27 @@ const StudentDirectory = ({ user }) => {
                             </form>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {showToast && (
+                <div style={{ 
+                    position: 'fixed', 
+                    bottom: '2rem', 
+                    right: '2rem', 
+                    background: showToast.includes('Error') ? '#ef4444' : 'var(--primary)', 
+                    color: 'white', 
+                    padding: '1rem 2rem', 
+                    borderRadius: '12px', 
+                    boxShadow: '0 10px 15px rgba(0,0,0,0.2)', 
+                    animation: 'fadeIn 0.3s ease-out', 
+                    zIndex: 1000, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.75rem' 
+                }}>
+                    <Check size={24} />
+                    <span style={{ fontWeight: 600 }}>{showToast}</span>
                 </div>
             )}
         </div>
